@@ -101,7 +101,7 @@ cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/pando_data_2022/all_b
 
 #modify file format from bed to region file format --> chr:from-to 
 
-awk '{print $1 ":" $2 "-" $3}' region_file_pando_invariant_sites.bed > region_file_pando_invariant_sites.region_file
+awk '{print $1 ":" $2 "-" $2}' region_file_pando_invariant_sites.bed > region_file_pando_invariant_sites.region_file
 
 
 ref=/uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/genome/Potrs01-genome.fa
