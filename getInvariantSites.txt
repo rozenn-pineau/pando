@@ -78,6 +78,41 @@ dim(export)
 write.table(export, "region_file_pando_invariant_sites.bed", sep = "\t", col.names = F, row.names = F, quote=FALSE)
 
 
+##Step : count invariant bases 
+
+
+#!/bin/sh
+#SBATCH --time=10:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=12
+#SBATCH --account=gompert-kp
+#SBATCH --partition=gompert-kp
+#SBATCH --job-name=countBases
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rozennpineau@uchicago.edu
+
+#goal : extract the regions from the fasta file that are invariant, and count the number of each base
+
+##based on the bed file for the invariant sites and the fasta file, output the invariant bases from the fasta file
+
+module load samtools/1.16
+
+cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/pando_data_2022/all_bams/pando-friends/pando/
+
+#modify file format from bed to region file format --> chr:from-to 
+
+awk '{print $1 ":" $2 "-" $3}' region_file_pando_invariant_sites.bed > region_file_pando_invariant_sites.region_file
+
+
+ref=/uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/genome/Potrs01-genome.fa
+
+bed=/uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/pando_data_2022/all_bams/pando-friends/pando/region_file_pando_invariant_sites.region_file
+
+samtools faidx --region-file $bed -o invar_bases_pando.fa $ref
+
+cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
+
+
 
 
 
