@@ -112,6 +112,12 @@ samtools faidx --region-file $bed -o invar_bases_pando.fa $ref
 
 cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 
+#2077338 A
+#1231148 C
+#1230613 G
+#    116 N
+#2075411 T
+
 
 
 
