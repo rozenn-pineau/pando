@@ -1,0 +1,28 @@
+##Step : extract depth from alignments
+
+#!/bin/sh
+#SBATCH --time=10:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=12
+#SBATCH --account=gompert-kp
+#SBATCH --partition=gompert-kp
+#SBATCH --job-name=bamDepth
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rozennpineau@uchicago.edu
+
+module load samtools/1.9
+module load bcftools/1.16
+
+cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/pando_data_2022/all_bams/pando-friends/pando
+
+ref=/uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/genome/Potrs01-genome.fa
+bam_list=pando_bam.list
+
+#calculate depth at each site
+samtools depth -f $bam_list --reference $ref -q 20 -Q 30 > pando_depth.txt
+
+#modify to bed format
+awk '{printf "%s\t%s\t%s", $1, $2, $2+1; for (i=3; i<=NF; i++) { printf("\t%s", $i) } print "" }'  pando_depth.txt > pando_depth.bed
+
+
+##Step : compare to variant file to remove variant sites 
