@@ -1,7 +1,7 @@
 # pando
 scripts for the Pando study
 
-### Estimating the number of invariant bases
+# Estimating the number of invariant bases
 
 ## Step : extract depth from alignments
 ```
@@ -22,15 +22,11 @@ cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/pando_data_2022/all_b
 
 ref=/uufs/chpc.utah.edu/common/home/u6028866/Pando/subclone/genome/Potrs01-genome.fa
 bam_list=pando_bam.list
-```
 
 #calculate depth at each site
-```
 samtools depth -f $bam_list --reference $ref -q 20 -Q 30 > pando_depth.txt
-```
 
 #modify to bed format
-```
 awk '{printf "%s\t%s\t%s", $1, $2, $2+1; for (i=3; i<=NF; i++) { printf("\t%s", $i) } print "" }'  pando_depth.txt > pando_depth.bed
 ```
 
