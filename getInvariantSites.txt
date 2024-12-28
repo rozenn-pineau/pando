@@ -118,6 +118,14 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 #    116 N
 #2075411 T
 
+# I did the same steps for the fine scane (subclone) files and obtained : 
+#1928021 A
+#1143053 C
+#1142243 G
+#     99 N
+#1925426 T
+
+
 
 
 
