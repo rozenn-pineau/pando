@@ -1,5 +1,5 @@
-# pando
-scripts for the Pando study
+# Pando project
+
 
 # Estimating the number of invariant bases
 
