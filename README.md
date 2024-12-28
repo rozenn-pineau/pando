@@ -127,7 +127,7 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 
 #--> a total of #6614510 invariant bases. 
 
-# I did the same steps for the fine scane (subclone) files and obtained : 
+## same steps for the fine-scale dataset :
 #1928021 A
 #1143053 C
 #1142243 G
