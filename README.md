@@ -1,7 +1,7 @@
 # Pando project
+Scripts and notes for the Pando project. 
 
-
-# Estimating the number of invariant bases
+#  Estimating the number of invariant bases
 
 ## Step : extract depth from alignments
 ```
@@ -135,3 +135,14 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 #1925426 T
 
 #--> a total of #6138743 invariant bases. 
+
+#  Running BEAST2 
+
+## Step : filtering for somatic mutations and converting to nexus format 
+prep_data_for_beast_pando.Rmd
+
+
+
+
+
+
