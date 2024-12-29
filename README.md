@@ -139,7 +139,7 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 #  Running BEAST2 
 
 ## Step : filtering for somatic mutations and converting to nexus format 
-prep_data_for_beast_pando.Rmd
+[prep_data_for_beast_pando.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_pando.Rmd)
 
 
 
