@@ -138,11 +138,44 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 
 #  Running BEAST2 
 
-## Step : filtering for somatic mutations and converting to nexus format 
+## Step : Filtering for somatic mutations and converting to nexus format 
+
+The nexus file was obtained by concatenating the set of somatic SNPs with binary coding of the presence of the homozygote genotype with one of the base pair (for example, "T"), a heterozygote with another base pair (for example, "A") and a missing site (no variant calling information for that site) with an "N".
+See the scripts in R: 
+
 [prep_data_for_beast_pando.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_pando.Rmd)
 
+## Step : Specify model parameters using Beauti
 
+We used the software package BEAST (version 2.7.5) to estimate the height of the phylogenetic tree for the Pando samples based on the accumulated somatic mutations; this was done on a coalescent Bayesian skyline model for effective population size. We chose the GTR nucleotide-substitution model to account for unequal substitutions rates between bases, starting with equal rates for all substitutions. We selected an optimized relaxed clock with a mean clock rate of 1. 
 
+## Step : Manually add the "invariant sites" line to the xml file
+
+We manually added the following line to all xml after the data block, to take into account invariant bases:
+
+```
+    <data id='pando_3498snps_102inds_cstsites' spec='FilteredAlignment' filter='-' data='@pando_3498snps_102inds' constantSiteWeights='0 0 0 6614510'/>
+```
+
+## Step : Run Beast on the cluster
+
+sample code
+
+```
+#!/bin/sh 
+#SBATCH --time=60:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=24
+#SBATCH --account=gompert
+#SBATCH --partition=notchpeak
+#SBATCH --job-name=beast2
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rpineau3@gatech.edu
+
+module load beast
+
+beast -overwrite pando_3934snps_102inds.xml
+```
 
 
 
