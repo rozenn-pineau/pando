@@ -1,0 +1,114 @@
+---
+title: "Pando dataset - prep data for Beast"
+output: html_document
+date: "2024-06"
+---
+
+# ----------------------------------------------------------------------------- #
+# upload data
+# ----------------------------------------------------------------------------- #
+
+```{r filter_pn, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list= ls())
+
+library(extrafont)
+library(geosphere)
+library(scales)
+library(tidyr)
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/")
+# sample and coordinate info
+ids <- read.csv("ids_PS_sup4.txt", sep = "\t", header = T) # 203 x 6
+ids <- ids[ids$group == "pando",] # 102 x 6
+# point estimates
+som <- read.table("gl_pando_3957snps_102inds.txt", sep = " ")
+som <- t(som) # 3957 x 102
+
+nInd <- 102
+hets <- rowSums(som)/nInd
+# Make sure there are no singletons and empty variants, and remove anything above 80%
+idx <- which(hets>1/nInd & hets < 0.8) # 3942
+som <- som[idx,] # 3942 x 102
+hets <- rowSums(som)/nInd
+
+# Check heterozygosity per SNP
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity", ylab = "counts", 100, main = "heterozygosity per SNP",
+     sub = "Pando (2018) dataset",
+     col = "#2ca25f")
+
+
+n_samp <- length(ids$full_ID)
+
+```
+
+
+
+```{r preparing_beast_nexus_files}
+# Exporting somatic mutations for Pando - format for nexus
+temp <- matrix(NA, dim(som)[1], dim(som)[2])
+temp[which(som == 0 )] <- "T"
+temp[which(som == 1 )] <- "A"
+temp <- unite(as.data.frame(t(temp)), col = "nexus", sep ="")
+export <- data.frame(samp = ids$full_ID, nexus = temp$nexus)
+
+write.table(export, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/2_nexus/pando/pando_3942snp_102inds.nexus", 
+             row.names = F, col.names = F, quote = F, sep = "\t")
+
+# Exporting randomized dropped mutation Pando GL file
+
+# testing if the number of mutations affects the tree structure, and thus the way we would calibrate the age
+# to do this, randomly keep 10,30,60,90% of the mutations 
+
+som_pando_fil_drop <- som
+D <- 20000 #max number of loops
+tot <- sum(rowSums(som)) # 45166 --> need to get rid of XX mutations, in random placements
+pct <- c(0.9,0.6,0.3,0.1) # percent of snps REMOVED
+nSNP <- dim(som)[1]
+nInd <- dim(som)[2]
+#update here
+goal <- round(pct[3]*tot)
+counter <- 0
+
+for (drop in 1:D) {
+
+    # take a snp at random and an individual at random
+    snp <- sample(1:nSNP, 100, replace = T)
+    ind <- sample(1:nInd, 100, replace = T)
+
+    for (i in 1:length(snp)) {
+
+      if (som_pando_fil_drop[snp[i],ind[i]]==1) {
+
+          som_pando_fil_drop[snp[i],ind[i]] <- 0
+          counter <- counter + 1
+      }
+
+    }
+
+    if (counter >= goal) { break } # check that this is true before exporting file
+}
+
+# check percent of remaining mutations - should be close to the goal
+sum(rowSums(som_pando_fil_drop))/tot 
+
+# # get rid of the empty snps
+remove <- which(rowSums(som_pando_fil_drop) == 0) # empty variants 
+length(remove)
+som_pando_fil_drop_fil <- som_pando_fil_drop[-remove,] 
+dim(som_pando_fil_drop_fil) #2032 x 102 #3498 x 102 #3842 x 102 #3934 x 102
+
+
+#format for nexus
+temp <- matrix(NA, dim(som_pando_fil_drop_fil)[1], dim(som_pando_fil_drop_fil)[2])
+temp[which(som_pando_fil_drop_fil == 0 )] <- "T"
+temp[which(som_pando_fil_drop_fil == 1 )] <- "A"
+temp <- unite(as.data.frame(t(temp)), col = "nexus", sep ="")
+export <- data.frame(samp = ids$full_ID, nexus = temp$nexus)
+
+write.table(export, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/2_nexus/pando/pando_3860snp_102inds.nexus", 
+             row.names = F, col.names = F, quote = F, sep = "\t")
+
+
+```
