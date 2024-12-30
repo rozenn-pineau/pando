@@ -178,6 +178,6 @@ beast -overwrite pando_3934snps_102inds.xml
 
 
 ```
-All xmls used in the study are under the xml folder. 
+All xmls used in the study are under the [xml folder](https://github.com/rozenn-pineau/pando/tree/main/xml). 
 
 
