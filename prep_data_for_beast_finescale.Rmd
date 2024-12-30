@@ -1,0 +1,112 @@
+---
+title: "Fine scale dataset - prep data for Beast"
+output: html_document
+date: "2024-06"
+---
+
+# ----------------------------------------------------------------------------- #
+# upload data
+# ----------------------------------------------------------------------------- #
+
+```{r filter_pn, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list= ls())
+
+library(extrafont)
+library(geosphere)
+library(scales)
+library(tidyr)
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/")
+ids <- read.csv("ids_PS_sup4.txt", sep = "\t", header = T)
+ids_subclone <- ids[ids$group!="pando",] # 101 x 6 
+som_subclone <- read.table("gl_subclone_3047snps_101inds.txt", sep = " ")
+som_subclone <- t(som_subclone) # 3047 x 101
+
+nInd <- 101
+hets <- rowSums(som_subclone)/nInd
+# Make sure there are no singletons and empty variants, and remove anything above 80%
+idx <- which(hets>1/nInd & hets < 0.8) #3034
+som_subclone <- som_subclone[idx,]
+hets <- rowSums(som_subclone)/nInd
+
+# Check heterozygosity per SNP
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity", ylab = "counts", 100, main = "heterozygosity per SNP",
+     sub = "Subclone 2022 dataset",
+     col = "#2ca25f")
+
+n_samp <- length(ids_subclone$full_ID)
+
+```
+
+
+
+```{r preparing_beast_nexus_files}
+# Exporting somatic mutations for fine scale dataset - format for nexus
+som <- som_subclone #3034 x 101
+temp <- matrix(NA, dim(som)[1], dim(som)[2])
+temp[which(som == 0 )] <- "T"
+temp[which(som == 1 )] <- "A"
+temp <- unite(as.data.frame(t(temp)), col = "nexus", sep ="")
+export <- data.frame(samp = ids_subclone$full_ID, nexus = temp$nexus)
+
+write.table(export, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/2_nexus/finescale/finescale_3034snp_101inds.nexus", 
+             row.names = F, col.names = F, quote = F, sep = "\t")
+
+# Exporting randomized dropped mutation Finescale GL file
+
+# testing if the number of mutations affects the tree structure, and thus the way we would calibrate the age
+# to do this, randomly keep 10,30,60,90% of the mutations 
+
+som_fs_drop <- som
+D <- 20000 #max number of loops
+tot <- sum(rowSums(som)) # 31794 --> need to get rid of XX mutations, in random placements
+pct <- c(0.9,0.6,0.3,0.1) # percent of snps REMOVED
+nSNP <- dim(som)[1]
+nInd <- dim(som)[2]
+#update here
+goal <- round(pct[4]*tot) #update number here, 1 to 4
+counter <- 0
+
+for (drop in 1:D) {
+
+    # take a snp at random and an individual at random
+    snp <- sample(1:nSNP, 100, replace = T)
+    ind <- sample(1:nInd, 100, replace = T)
+
+    for (i in 1:length(snp)) {
+
+      if (som_fs_drop[snp[i],ind[i]]==1) {
+
+          som_fs_drop[snp[i],ind[i]] <- 0
+          counter <- counter + 1
+      }
+
+    }
+
+    if (counter >= goal) { break } # check that this is true before exporting file
+}
+
+# check percent of remaining mutations - should be close to the goal
+sum(rowSums(som_fs_drop))/tot 
+
+# # get rid of the empty snps
+remove <- which(rowSums(som_fs_drop) == 0) # empty variants 
+length(remove)
+som_fs_drop_fil <- som_fs_drop[-remove,] 
+dim(som_fs_drop_fil) #1526 x 102 #2692 x 102 #2978 x 102 #3029 x 102
+
+
+#format for nexus
+temp <- matrix(NA, dim(som_fs_drop_fil)[1], dim(som_fs_drop_fil)[2])
+temp[which(som_fs_drop_fil == 0 )] <- "T"
+temp[which(som_fs_drop_fil == 1 )] <- "A"
+temp <- unite(as.data.frame(t(temp)), col = "nexus", sep ="")
+export <- data.frame(samp = ids_subclone$full_ID, nexus = temp$nexus)
+
+write.table(export, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/2_nexus/finescale/finescale_3029snp_101inds.nexus", 
+             row.names = F, col.names = F, quote = F, sep = "\t")
+
+
+```
