@@ -147,6 +147,7 @@ The nexus file was obtained by concatenating the set of somatic SNPs with binary
 See the scripts in R: 
 
 [prep_data_for_beast_pando.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_pando.Rmd)
+[prep_data_for_beast_finescale.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_finescale.Rmd)
 
 ### Step 2 : Specify model parameters using Beauti
 
