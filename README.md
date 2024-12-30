@@ -119,6 +119,7 @@ samtools faidx --region-file $bed -o invar_bases_pando.fa $ref
 
 cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 ```
+```
 #2077338 A
 #1231148 C
 #1230613 G
@@ -126,8 +127,9 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 #2075411 T
 
 #--> a total of #6614510 invariant bases. 
-
+```
 ### same steps for the fine-scale dataset :
+```
 #1928021 A
 #1143053 C
 #1142243 G
@@ -135,6 +137,7 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 #1925426 T
 
 #--> a total of #6138743 invariant bases. 
+```
 
 #  Running BEAST2 
 
@@ -157,7 +160,7 @@ We manually added the following line to all xml after the data block, to take in
     <data id='pando_3498snps_102inds_cstsites' spec='FilteredAlignment' filter='-' data='@pando_3498snps_102inds' constantSiteWeights='0 0 0 6614510'/>
 ```
 
-### 4 Step : Run Beast on the cluster
+### Step 4 : Run Beast on the cluster
 
 sample code
 
