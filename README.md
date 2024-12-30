@@ -3,7 +3,7 @@ Scripts and notes for the Pando project.
 
 #  Estimating the number of invariant bases
 
-## Step : extract depth from alignments
+### Step 1 : extract depth from alignments
 ```
 #!/bin/sh
 #SBATCH --time=10:00:00
@@ -30,7 +30,7 @@ samtools depth -f $bam_list --reference $ref -q 20 -Q 30 > pando_depth.txt
 awk '{printf "%s\t%s\t%s", $1, $2, $2+1; for (i=3; i<=NF; i++) { printf("\t%s", $i) } print "" }'  pando_depth.txt > pando_depth.bed
 ```
 
-## Step : compare to variant file to remove variant sites 
+### Step 2 : compare to variant file to remove variant sites 
 
 #make bed from vcf
 ```
@@ -64,7 +64,7 @@ bedtools intersect -v -wa -a $depth -b $bed > /uufs/chpc.utah.edu/common/home/u6
 #-wa report original entry in A (full line)
 ```
 
-## Step : filter sites with mean depth < 2 and less then 80% of individuals with data (in R)
+### Step 3 : filter sites with mean depth < 2 and less then 80% of individuals with data (in R)
 ##(I ran the job on the cluster using sbatch because it was too much work for an interactive session)
 ```
 #!/usr/bin/env Rscript
@@ -85,7 +85,7 @@ dim(export)
 write.table(export, "region_file_pando_invariant_sites.bed", sep = "\t", col.names = F, row.names = F, quote=FALSE)
 ```
 
-## Step : count invariant bases 
+### Step 4 : count invariant bases 
 
 ```
 #!/bin/sh
@@ -127,7 +127,7 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 
 #--> a total of #6614510 invariant bases. 
 
-## same steps for the fine-scale dataset :
+### same steps for the fine-scale dataset :
 #1928021 A
 #1143053 C
 #1142243 G
@@ -138,18 +138,18 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 
 #  Running BEAST2 
 
-## Step : Filtering for somatic mutations and converting to nexus format 
+### Step 1 : Filtering for somatic mutations and converting to nexus format 
 
 The nexus file was obtained by concatenating the set of somatic SNPs with binary coding of the presence of the homozygote genotype with one of the base pair (for example, "T"), a heterozygote with another base pair (for example, "A") and a missing site (no variant calling information for that site) with an "N".
 See the scripts in R: 
 
 [prep_data_for_beast_pando.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_pando.Rmd)
 
-## Step : Specify model parameters using Beauti
+### Step 2 : Specify model parameters using Beauti
 
 We used the software package BEAST (version 2.7.5) to estimate the height of the phylogenetic tree for the Pando samples based on the accumulated somatic mutations; this was done on a coalescent Bayesian skyline model for effective population size. We chose the GTR nucleotide-substitution model to account for unequal substitutions rates between bases, starting with equal rates for all substitutions. We selected an optimized relaxed clock with a mean clock rate of 1. 
 
-## Step : Manually add the "invariant sites" line to the xml file
+### Step 3 : Manually add the "invariant sites" line to the xml file
 
 We manually added the following line to all xml after the data block, to take into account invariant bases:
 
@@ -157,7 +157,7 @@ We manually added the following line to all xml after the data block, to take in
     <data id='pando_3498snps_102inds_cstsites' spec='FilteredAlignment' filter='-' data='@pando_3498snps_102inds' constantSiteWeights='0 0 0 6614510'/>
 ```
 
-## Step : Run Beast on the cluster
+### 4 Step : Run Beast on the cluster
 
 sample code
 
@@ -175,7 +175,9 @@ sample code
 module load beast
 
 beast -overwrite pando_3934snps_102inds.xml
-```
 
+
+```
+All xmls used in the study are under the xml folder. 
 
 
