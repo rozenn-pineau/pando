@@ -163,7 +163,7 @@ We manually added the following line to all xml after the data block, to take in
     <data id='pando_3498snps_102inds_cstsites' spec='FilteredAlignment' filter='-' data='@pando_3498snps_102inds' constantSiteWeights='0 0 0 6614510'/>
 ```
 
-### Step 4 : Run Beast on the cluster
+### Step 4 : Run Beast 
 
 sample code
 
@@ -185,5 +185,17 @@ beast -overwrite pando_3934snps_102inds.xml
 
 ```
 All xmls used in the study are under the [xml folder](https://github.com/rozenn-pineau/pando/tree/main/xml). 
+
+
+### Step 5 : Analyze .log and .trees files
+We base our age estimation on the conversion of the phylogenetic tree height to an age in years. This was done in R based on the .log file. 
+
+To visualize effective population size through time, we used Beast Traver v1.7.2 to reconstruct the Bayesian Skyline, under "Analysis", "Bayesian Skyline reconstruction" and saving the output data table. 
+
+
+R scripts to plot Beast results : 
+
+
+
 
 
