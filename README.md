@@ -21,22 +21,22 @@ bcftools isec TO COMPLETE
 Secondly, to minimize the effects of sequencing errors, we removed mutations that were found in only one sample. 
 
 
-Summary table : 
+Summary table for the *replicate dataset* : 
 
-| Step   | description                        | # mutations for the replicate dataset  | script |
+| Step   | description                        | # mutations  | script |
 | -------|:----------------------------------:| ---------:|  -------------------:|
-| 1      | compare to "panel of normals"       | 332120   | add template | 
-| 2      | compare to neighboring clones       | 320081   | add template | 
-| 3      | filter crap (without p value tests) | 311551   | add template | 
-| 4      | calculate genotype likelihood and AF | 4607    | add template |
-| 5      | modify AF vector (anything > 0.7 is set to 0, anything between 0.5 and 0.7 is set to 0.5) | 4607     | add template |
-| 6      | calculate point estimate and depth| 4607     | add template |
-| 7      | filter for individuals: mean depth > 4 | 4607   | add template |
-| 8      | binarize the point estimates and remove singletons | 4607   | add template |
-| 9      | keep variants found in >2 samples per group and <=8 groups  | 536   | add template |
-| 10     | filter vcf based on bool | 536   | add template |
-| 11     | filter individuals with depth <4 | 536   | add template |
-| 12     | remove more crap using the p-value filters | 101   | add template |
+| 1      | compare to "panel of normals"       | 332120   | [compare_vcfs_template.sh](https://github.com/rozenn-pineau/pando/blob/main/compare_vcfs_template.sh) | 
+| 2      | compare to neighboring clones       | 320081   | [compare_vcfs_template.sh](https://github.com/rozenn-pineau/pando/blob/main/compare_vcfs_template.sh) | 
+| 3      | filter crap (without p value tests) | 311551   | [filter_vcf_reps_1.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_reps_1.pl) | 
+| 4      | calculate genotype likelihood and AF | 4607    | [vcf2gl.pl](https://github.com/rozenn-pineau/pando/blob/main/vcf2gl.pl) |
+| 5      | modify AF vector (anything > 0.7 is set to 0, anything between 0.5 and 0.7 is set to 0.5) | 4607     | [filter_af.R](https://github.com/rozenn-pineau/pando/blob/main/filter_af.R) |
+| 6      | calculate point estimate and depth| 4607     | [gl2genet.pl](https://github.com/rozenn-pineau/pando/blob/main/gl2genet.pl) and [getDepth.sh](https://github.com/rozenn-pineau/pando/blob/main/getDepth.pl) |
+| 7      | filter for individuals: mean depth > 4 | 4607   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd) |
+| 8      | binarize the point estimates and remove singletons | 4607   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd)  |
+| 9      | keep variants found in >2 samples per group and <=8 groups  | 536   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd)  |
+| 10     | filter vcf based on bool | 536   | (filter_vcf_based_on_bool.py)[https://github.com/rozenn-pineau/pando/blob/main/filter_vcf_based_on_bool.py] |
+| 11     | filter individuals with depth <4 | 536   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd) |
+| 12     | remove more crap using the p-value filters | 101   | [vcfFilter_536nps_80inds.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_536nps_80inds.pl) |
 
 
 
