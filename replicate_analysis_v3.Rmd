@@ -1,0 +1,607 @@
+---
+title: "Replicate dataset analysis"
+output: html_document
+date: "2024-05-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list= ls())
+
+library(viridis)
+library(colourvalues) # https://symbolixau.github.io/colourvalues/
+library(extrafont)
+library(plot.matrix)
+library(gplots)
+
+```
+
+### Dataset details
+
+The variants were called on the 2024 dataset only (8 times 12 samples from the 2022 subclone dataset). <br />
+filters applied so far : SNPs removed when found in PON + Friends + "crap" + modified allele frequency vector + somatic point estimate script
+
+
+reasoning for the modified allele frequency vector : the allele frequencies are sometimes >0.5. For somatic mutations, we do not want to keep mutations that are widespread (shared by all individuals). The Pando clone is triploid, which reduces our expectation for fixation of a mutation to 0.33. We thus transform the allele frequency file to not take into account any variants whose allele frequency > 0.7, and reduce to 0.5 ane allele frequency comprised between 0.5 and 0.7.
+
+# -----------------------------------------------------------------------------
+# Step 1: point estimates with modified allele frequencies
+# -----------------------------------------------------------------------------
+
+Filter for mean individual read depth>4 , empty variants and singletons. 
+
+```{r filter_pn, echo=TRUE}
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/data")
+# upoad pntest data and depth info
+pn_est <- read.table("pntest_somatic_filtered_ponfil_friendfil_replicates.txt", sep = " ", header = F ) # 4607 x 96
+depth <- read.table("depth_filtered_ponfil_friendfil_replicates.txt", sep = "\t", header = T) # 4607 x 96
+ids <- read.csv("ids_filtered_ponfil_friendfil_replicates.txt", sep = "\t", header = T) # 96 x 5
+
+
+# Filter based on depth
+par(family = "Times New Roman")
+plot(colMeans(depth), pch = 16, xlab = "individual", ylab = "depth", ylim = c(0,150)) # Mean depth per sample
+abline(h=4, col = "red")
+keep <- which (colMeans(depth) >= 4) # 80
+
+pnt_est_fil <- pn_est[,keep] # 797 x 80
+ids_fil <- ids[as.numeric(keep), ] # 80 x 5
+depth_fil <- depth[,keep] # 797 x 80
+```
+
+
+```{r filter_pn, echo=TRUE}
+# -----------------------------------------------------------------------------
+# BINARIZATION
+# -----------------------------------------------------------------------------
+pn_bin <- matrix(NaN, dim(pnt_est_fil)[1], dim(pnt_est_fil)[2])
+threshold <- 0.5
+
+for (x in 1:dim(pnt_est_fil)[1]) {
+  
+  for (y in 1:dim(pnt_est_fil)[2]) {
+    
+    if (pnt_est_fil[x,y]>threshold) {pn_bin[x,y] <- 1 } # if proba of being heteroZ > threshold, label with 1
+    
+    else {pn_bin[x,y] <- 0 }
+    
+  }
+}
+
+
+nInd <- 80 # number of individuals in the dataset
+hets <- rowSums(pn_bin)/nInd
+# length(which(hets == 0)) # 182
+# length(which(rowSums(pn_bin)>1)) # 4045
+# length(which(rowSums(pn_bin)==1)) # 380
+
+# remove singletons, meaning present in 1/nInd individuals AND
+# present in zero individuals (left after filtering out some individuals, maybe)
+
+pn_bin_fil <- pn_bin[c(rowSums(pn_bin)>1),] # 4045 x  80
+hets <- (rowSums(pn_bin_fil))/nInd
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity", ylab = "counts", 100, main = "heterozygosity per SNP, after removing singletons", 
+     col = "#2ca25f")
+
+# keep track of indices of the SNPs that make it through the filters
+winners <- 1:c(dim(pn_est)[1]) # 4607
+winners_v1 <- winners[rowSums(pn_bin)>1] # 4045
+
+```
+
+
+There are a lot of mutations that are above 0.8 - we keep them when we calculate the replicability of our sequencing (i.e. the probability of catching a mutation if it is there).
+
+# -----------------------------------------------------------------------------
+# Step 2. Assess replication power (quality of our re-sequencing experiment)
+# -----------------------------------------------------------------------------
+What is the probability that, if I detect a mutation in one sample within the replicate group, I detect it in all other samples within the group?
+
+
+```{r similarity}
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/figures")
+
+#pdf(file=paste("replication_within_rep_groups.pdf", sep="" ), bg = "transparent", width=8, height=6, family = "Times New Roman")
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+layout(matrix(c(1,2,2,1,2,2, 3,4,4,3,4,4), nrow = 4, ncol = 3, byrow = TRUE)) # layout for figure
+
+
+# How many mutations are found in every replicate versus not?
+ids_fil$group
+
+# dataset divided by replicate group (3 to 8 samples)
+group <- c(1:12) # 3 replicates for group 2, 2 replicates for group 7 
+store_prop <- c()
+
+# number of mutations found in every replicate, normalized by the mean number of mutations found in each replicate
+for (rep in 1:length(group)) {
+  
+  inds <- which( ids_fil$group == group[rep] )
+
+  ind_prop <- c(rowSums(pn_bin_fil[,inds])/length(inds)) # proportion of individuals with the mutation
+
+  mean_n_mut <- mean(colSums(pn_bin_fil[,inds])) # mean number of mutations per sample
+
+  prop <- c( length(which( ind_prop == 1 )) ) / mean_n_mut
+  
+  store_prop <- c(store_prop, prop)
+  
+}
+
+data_store_prop <- store_prop
+
+
+plot(data_store_prop, pch = 16, ylim = c(0,1), xlab = "Group", ylab = "Prop. of SNP found in all samples within group")
+abline(h=mean(store_prop), col = "#045a8d") # 0.72
+
+# 2 - Compare to random
+store_mean_prop <- c()
+
+for (sim in 1:1000){
+  
+
+  pn_bin_rdn <- apply(pn_bin_fil, 2, sample)
+  store_prop <- c()
+  
+  # number of mutations found in every replicate, normalized by the mean number of mutations found in each replicate
+  for (rep in 1:length(group)) {
+    
+    rand_inds <- sample(ids_fil$group) # re-shuffle individuals  
+    
+    inds <- which( rand_inds == group[rep] )
+    
+    ind_prop <- c(rowSums(pn_bin_rdn[,inds])/length(inds)) # proportion of individuals with the mutation
+    mean_n_mut <- mean(colSums(pn_bin_fil[,inds])) # mean number of mutations per sample
+    #prop <- c(length(which( ind_prop == 0 )) + length(which( ind_prop == 1 )) ) / nSNP
+    prop <- c( length(which( ind_prop == 1 )) ) / mean_n_mut
+    store_prop <- c(store_prop, prop)
+    
+    }
+  
+  store_mean_prop[sim] <- mean(store_prop)
+  
+}
+
+# Plot and compare
+hist(store_mean_prop, 10, xlab = "Proportion of SNP found in all samples within group", col = "#a8ddb5", xlim = c(0,1),
+     main = "", border = "#a8ddb5")
+box()
+lines(rep(mean(data_store_prop),2), c(0,150),  col = "#045a8d")
+legend("topleft", legend = c("Expected by chance" , "Mean for data (0.72)"), pch = 15, col = c("#a8ddb5", "#045a8d"), bty = "n" )
+
+
+###### Part 2: Allow one missing mutation by changing threshold to 0.8
+
+store_prop <- c()
+
+# number of mutations found in every replicate, normalized by the mean number of mutations found in each replicate
+for (rep in 1:length(group)) {
+  
+  inds <- which( ids_fil$group == group[rep] )
+
+  ind_prop <- c(rowSums(pn_bin_fil[,inds])/length(inds)) # proportion of individuals with the mutation
+
+  mean_n_mut <- mean(colSums(pn_bin_fil[,inds])) # mean number of mutations per sample
+  
+  prop <- c( length(which( ind_prop >= 0.8 )) ) / mean_n_mut
+  store_prop <- c(store_prop, prop)
+  
+}
+
+data_store_prop <- store_prop
+plot(data_store_prop, pch = 16, ylim = c(0,1), xlab = "Group", ylab = "Prop. of SNP found in >80% of the samples within group")
+abline(h=mean(store_prop), col = "#045a8d") # 0.83
+
+# 2 - Compare to random
+store_mean_prop <- c()
+
+for (sim in 1:1000){
+  
+
+  pn_bin_rdn <- apply(pn_bin_fil, 2, sample)
+  store_prop <- c()
+  
+  # number of mutations found in every replicate, normalized by the mean number of mutations found in each replicate
+  for (rep in 1:length(group)) {
+    
+    rand_inds <- sample(ids_fil$group) # re-shuffle individuals  
+    
+    inds <- which( rand_inds == group[rep] )
+    
+    ind_prop <- c(rowSums(pn_bin_rdn[,inds])/length(inds)) # proportion of individuals with the mutation
+    mean_n_mut <- mean(colSums(pn_bin_fil[,inds])) # mean number of mutations per sample
+    #prop <- c(length(which( ind_prop == 0 )) + length(which( ind_prop == 1 )) ) / nSNP
+    prop <- c( length(which( ind_prop >= 0.8 )) ) / mean_n_mut
+    store_prop <- c(store_prop, prop)
+    
+    }
+  
+  store_mean_prop[sim] <- mean(store_prop, na.rm=T)
+  
+}
+
+# Plot and compare
+hist(store_mean_prop, 10, xlab = "Proportion of SNP found in >80% of the samples within group", col = "#a8ddb5", xlim = c(0,1), border = "#a8ddb5", main="")
+box()
+lines(rep(mean(data_store_prop),2), c(0,250),  col = "#045a8d")
+legend("topleft", legend = c("Expected by chance" , "Mean for data (0.89)"), pch = 15, col = c("#a8ddb5", "#045a8d"), bty = "n" )
+
+
+#dev.off()
+```
+
+
+
+# -----------------------------------------------------------------------------
+# Step 3: Filtering for somatic mutations
+# -----------------------------------------------------------------------------
+We checked that we could trust the data. Now I will select for the somatic mutations only. 
+
+```{r filter_for_som_mutations}
+nSNP <- 4045
+
+store_sum_group <- matrix(NA,nSNP,length(group)) # 4045 x 12
+
+### reduce the dataset from individual information to group-level information
+
+for (rep in 1:length(group)) {
+  
+  inds <- which( ids_fil$group == group[rep] ) # filter by group
+
+  ind_sum <- rowSums(pn_bin_fil[,inds])  # nb of individuals with the mutation
+
+  store_sum_group[,rep] <- ind_sum
+  
+}
+
+# Keep the SNP if found in at least 2 samples, and at most 9 groups 
+
+### identify the SNPs found more than once per group
+occurrence <- matrix(0, nSNP, length(group)) 
+
+for (G in 1:length(group)) {
+    
+      occurrence[which(store_sum_group[,G] >= 2),G] <- 1
+}
+
+
+# occurence is a matrix where there is a "1"  if the SNP is found in more than 2 samples within the group
+
+# to find "somatic" SNPs, i.e. SNPs found in at most 8 groups, we can keep the lines (SNPs) for which the sum is less than 9
+
+som_snps_idx <- which(rowSums(occurrence) < 9 & rowSums(occurrence) > 0) # 536 out of 4045
+
+# Check the histogram
+hets <- (rowSums(pn_bin_fil[som_snps_idx,]))/nInd
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity", ylab = "counts", 50, main = "heterozygosity per SNP for somatic set", 
+     col = "#2ca25f")
+
+
+
+# Make a new boolean vector to export the SNPs to work with
+winners_v2 <- winners_v1[som_snps_idx] # 536 mutations
+bool <- matrix(0, dim(pn_bin)[1], 1)
+bool[winners_v2] <- 1 
+
+ #write.table(bool, "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/data/bool_filter_replicate_vcf_536snps_today.txt", row.names = F)
+ # write.table(ids_fil$full_ID, "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/data/ids_80inds.txt", row.names = F)
+ # 
+ # 
+check <- pn_bin[as.factor(as.numeric(bool)),]
+rowSums(check)
+colSums(check)
+
+check <- pn_bin[which(bool==1),]
+rowSums(check)
+colSums(check)
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(c(rowSums(pn_bin[which(bool==1),]))/96, xlab = "Heterozygosity", ylab = "counts", 50, main = "heterozygosity per SNP for somatic set", 
+     col = "#2ca25f")
+
+
+```
+
+
+How many mutations in common between this set of 536 somatic mutations and the single samples from the Pando dataset?
+
+
+### Here: this set of somatic SNPs was further filtered to remove crap (based on the p-values) - this is the set that I am using as a base to compare it to the singles. 
+
+```{r 101_somatic_snps}
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/data")
+# upoad pntest data and depth info
+pn_est <- read.table("pntest_somatic_101SNPs_80inds.txt", sep = " ", header = F ) # 101 x 80
+
+# -----------------------------------------------------------------------------
+# BINARIZATION
+# -----------------------------------------------------------------------------
+pn_bin <- matrix(NaN, dim(pn_est)[1], dim(pn_est)[2])
+threshold <- 0.5
+
+for (x in 1:dim(pn_est)[1]) {
+  
+  for (y in 1:dim(pn_est)[2]) {
+    
+    if (pn_est[x,y]>threshold) {pn_bin[x,y] <- 1 } # if proba of being heteroZ > threshold, label with 1
+    
+    else {pn_bin[x,y] <- 0 }
+    
+  }
+}
+
+
+nInd <- 80
+hets <- (rowSums(pn_bin))/nInd
+
+
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/figures/") 
+# pdf(file=paste("hets_per_snp_replicate_dataset.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity per SNP for somatic set", ylab = "counts", 50, main = "", sub = "Replicate dataset, 80 individuals and 101 SNPs",
+     col = "#b2abd2")
+
+#dev.off()
+
+```
+The below analysis takes into account all mutations, including the fixed ones. (not the somatic mutations set)
+```{r some_stats}
+# If the mutation is found in 2 replicate samples, in how many samples is it found?
+t <- 2
+p <- which(rowSums(occurrence) >= t ) # found in at least 2 groups, 3725 groups
+mean(rowSums(occurrence[p,])) # 11.53
+
+
+# compare to random
+N <- 100
+store_means <- matrix(NA, 1, N)
+
+for (n in 1:N) {
+  
+  rdn <- matrix(NA,dim(occurrence)[1],dim(occurrence)[2])
+  # shuffle dataset here
+  for (i in 1:dim(occurrence)[2]) {
+  
+     rdn[,i] <- occurrence[sample(1:dim(occurrence)[1]),i]
+  
+       }
+
+  p <- which( rowSums(rdn) >= t ) # found in at least 2 groups, 3725 groups
+  print(length(p))
+  
+  store_means[n] <- mean(rowSums(rdn[p,])) 
+  
+}
+mean(store_means) # 10.16
+
+# Plot and compare
+hist(store_means/12, 10, xlab = "Number", col = "#a8ddb5", border = "#a8ddb5", main="")
+lines(rep(mean(rowSums(occurrence[p,]))/12, 2), c(0,25),  col = "#045a8d")
+legend("topright", legend = c("Expected by chance" , "Mean for data (0.85)"), pch = 15, col = c("#a8ddb5", "#045a8d"), bty = "n" )
+
+
+
+par(family = "Times New Roman")
+p1 <- hist(rowSums(rdn)/12, 7, plot = F)
+p2 <- hist(rowSums(occurrence[p,])/12, plot = F)
+plot(p2, col=rgb(0,0,1,1/4), main = "Prop. of inds with the snp when found in 2 inds", xlab = "Proportion" )
+plot(p1, col=rgb(168/255,221/255,181/255,1/4), add=T) 
+legend("topleft", legend= c("data", "randomized dataset"), pt.bg =  c(rgb(0,0,1,1/4), rgb(168/255,221/255,181/255,1/4)), bty = "n", 
+       pch = 22)
+
+
+```
+
+### Now I want to assess the replication power *within the somatic mutation set* 
+
+```{r somatic_mutation_replication}
+dp <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/data/101snps_80inds_depth.txt", header = T) #101 x 80
+
+
+nSNP <- 101
+group <- c(1:12) # 3 replicates for group 2, 2 replicates for group 7 
+
+store_sum_group <- matrix(NA,nSNP,length(group)) # 101 x 12
+store_group_mean_depth <- matrix(NA,nSNP,length(group)) # 101 x 12
+### reduce the dataset from individual information to group-level information
+
+for (rep in 1:length(group)) {
+  
+  inds <- which( ids_fil$group == group[rep] ) # filter by group
+
+  ind_sum <- rowSums(pn_bin[,inds])  # nb of individuals with the mutation
+
+  gp_dp <- rowMeans(dp[,inds])
+  
+  store_sum_group[,rep] <- ind_sum
+  store_group_mean_depth[,rep] <- gp_dp
+  
+}
+
+
+```
+
+```{r some_stats}
+store_rep <- matrix(NA,12)
+
+for (g in 1:12) {
+  
+  len <- length( which( ids_fil$group == g ) ) # number of samples in the group
+  store_rep[g] <- length(which(store_sum_group[,g] == len))
+  
+}
+
+# 3 samples have a few mutations (1,2 and 3) found in every replicate
+store_rep <- matrix(0,101)
+
+for (snp in 1:101) {
+  
+  if (length(which(store_sum_group[snp,] == 0)) > 1 ) {
+    store_rep[snp] <- 1
+  }
+  
+  
+}
+
+# Most SNPs are not found in every replicate
+
+```
+
+
+```{r rep_power_som}
+# If it is found in 2 samples within the replicate, in how many is it found?
+# On average, when found in two replicates, in how many samples within the group is it found, and in how many groups?
+nb_muts <- c() # keep track of the sample group ID
+rep_power <- c() # keep track of the number of times the mutation in present if present in a least 2
+shared_snps <- list()
+non_shared_snps <- list()
+means <- c()
+gitter <- c()
+group <- 1:12
+
+for (g in 1:12) {
+  
+  len <- length( which( ids_fil$group == g ) ) # number of samples in the group
+  cur <- store_sum_group[ which(store_sum_group[,g] >= 2), g ] / len # proportion of samples presenting the mutation
+  shared_snps[[g]] <- which(store_sum_group[,g] >= 2)
+  non_shared_snps[[g]] <- which(store_sum_group[,g] < 2)
+  n <- length(which(store_sum_group[,g] >= 2)) # number of mutations
+  
+  # store
+  gitter <- c(gitter, seq(g-0.25,g+0.25,by=0.5/n)[1:n] )
+  nb_muts <- c(nb_muts, rep(g,n))
+  rep_power <- c(rep_power, cur)
+  means <- c(means, mean(cur))
+  
+}
+
+mean_data <- mean(means, na.rm = T)
+
+# visualize
+par(family = "Times New Roman")
+plot(gitter, rep_power, pch = 16, ylim = c(0,1), col = "#454545", sub = "Somatic set only (101 SNPs)",
+     xlab = "Group", ylab ="Proportion", main = "Prop. of samples with somatic mutation when found in at least 2 samples")
+points(1:12, means, pch = 18, col = "red", cex = 1.5)
+abline(h= mean_data, col = "red") # 0.4428991
+```
+
+
+```{r correlation_with_cov}
+#calculate means
+store_means_shared <- c()
+store_means_non_shared <- c()
+store_sd_shared <- c()
+store_sd_non_shared <- c()
+for (p in 1:12) {
+  
+  #shared SNPs
+  store_means_shared <- c(store_means_shared, mean(store_group_mean_depth[shared_snps[[p]]]) )
+  store_sd_shared <- c(store_sd_shared, sd(store_group_mean_depth[shared_snps[[p]]])/sqrt(length((store_group_mean_depth[shared_snps[[p]]]))) )
+  #non-shared SNPs
+  store_means_non_shared <- c(store_means_non_shared, mean(store_group_mean_depth[non_shared_snps[[p]]]) )
+  store_sd_non_shared <- c(store_sd_non_shared, sd(store_group_mean_depth[non_shared_snps[[p]]])/sqrt(length((store_group_mean_depth[non_shared_snps[[p]]]))) )
+}
+
+pdf(file="/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Supp/supp_replication_replicates.pdf", 
+    bg = "transparent", width=6, height=4, family = "Times New Roman")
+
+#plot the depth of SNPs that replicate within groups versus the depth of SNPs that do not replicate within groups
+par(family = "Times New Roman")
+plot(1:12, store_means_shared, xlim = c(0,13), pch = 16, ylim = c(0,250), xlab = "Replicate group", ylab = "Mean depth")
+arrows(1:12, store_means_shared+store_sd_shared, 1:12, store_means_shared-store_sd_shared, 
+       code = 3, angle = 90, length = 0.1)
+points(1:12, store_means_non_shared, xlim = c(0,13), pch = 16, col = "red")
+arrows(1:12, store_means_non_shared+store_sd_non_shared, 1:12, store_means_non_shared-store_sd_non_shared, 
+       code = 3, angle = 90, length = 0.1, col = "red")
+
+legend("topright", legend = c("shared SNPs", "non shared SNPs"), pch = 16, col = c("black", "red"), bty = "n")
+#anova
+
+dev.off()
+#compare shared to not shared (all means together)
+df <- data.frame( status = c(rep("shared", 12),rep("non_shared", 12)),
+                  means = c(store_means_shared, store_means_non_shared) )
+t.test(store_means_shared, store_means_non_shared, alternative = "two.sided") # t = 0.68717, df = 11.171, p-value = 0.506
+```
+
+
+
+```{r cmp_to_rdn}
+# randomize individuals between groups and do the same calculation as above to compare to null distribution
+N <- 1000
+store_means_rdn <- matrix(NA,1,N)
+group <- c(1:6,8:12) # remove group 7 because it only has 2 samples
+
+for (r in 1:N) {
+  
+  
+    # reshuffle the dataset
+  
+    idx <- sample(1:nInd)
+    shuffled <- pn_bin[,idx]
+  
+    # reduce the dataset from individual information to group-level information
+    store_sum_group_rdn <- matrix(NA,nSNP,length(group)) # 101 x 12
+    
+    for (rep in 1:length(group)) {
+      
+      inds <- which( ids_fil$group == group[rep] ) # filter by group
+    
+      ind_sum <- rowSums(shuffled[,inds])  # nb of individuals with the mutation
+    
+      store_sum_group_rdn[,rep] <- ind_sum
+      
+    }
+      
+    
+    # calculate 
+    means <- c()
+    for (g in group) {
+      
+      len <- length( which( ids_fil$group == g ) ) # number of samples in the group
+      
+      
+      cur <- store_sum_group_rdn[ which(store_sum_group_rdn[, which(group == g) ] >= 2), which(group == g) ] / len # proportion of samples presenting the mutation
+    
+      # store
+      means <- c(means, mean(cur))
+      
+    }
+    
+    store_means_rdn[r] <- mean(means) #, na.rm=T)
+
+}
+
+
+setwd("/Users/rozenn/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/0_replicate_dataset/figures/") 
+pdf(file=paste("cmp_to_rdn.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(store_means_rdn, 20, xlim = c(0.24, 0.5), xlab = "Prop. of samples with somatic mutation when found in at least 2 samples", 
+     main = "", sub = "Somatic set only, 101 mutations", probability = T)
+lines(rep(mean_data,2), c(0, 120), col = "red", lwd = 2)
+legend("topleft", c("Mean for data", "Mean for randomized dataset"), pch = 22, pt.bg = c("#969696", "red"), bty = "n")
+
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
