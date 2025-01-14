@@ -10,15 +10,9 @@ We used principal component analysis (PCA) to ordinate the samples and k-means c
 
 #  Filtering for somatic mutations
 
-### Step (1) : Initial quality filtering of the vcf files
+### Replicates dataset steps
+To separate somatic mutations from the pool of genetic variants, we created a set of variants found in the neighboring clones and in 100 \textit{P. tremuloides} samples from the USA's Intermountain region (Colorado, Wyoming, Nevada, Idaho). We removed variants that were found in both the Pando clone samples and this comparative dataset, that we called the "panel of normals", with the reasoning that common mutations may be germline in origin, or highly mutable sites (steps 1 and 2 in the table). We did an initial quality filtering step (step 3), and calculated the genotype likelihoods and allele frequencies (step 4). Some allele frequencies being sometimes > 0.5, we decided to modify the allele frequency vector as we do not expect somatic mutations to be widespread (shared by all individuals). The Pando clone is triploid, which reduces our expectation for fixation of a mutation to 0.33. We thus transformed the allele frequency file to remove any variants with AF > 0.7, and reduced to 0.5 AF comprised between 0.5 and 0.7 (Step 5). We then calculated the point estimate based on this modified allele frequency, and the depth at each site and each variant (step 6). We filtered out individuals with a mean depth < 4x (step 7), binarized the point estimates and removed singletons (step 8). For the replicate dataset, because we have up to 8 times the same DNA and because we want to keep the variants present in less than 80% of the population, we kept the variants found in >2 samples per group and <=8 groups (step 9). We came back to the vcf, ans we kept the variants that passed all the previous filters (step 10). Finally, we re-filtered the vcf files, this time with the Mann-Whitney tests of base quality, mapping quality and read position bias (step 11). 
 
-### Step (2) : removing "common" mutations
-To separate somatic mutations from the pool of genetic variants, we created a set of variants found in the neighboring clones and in 100 \textit{P. tremuloides} samples from the USA's Intermountain region (Colorado, Wyoming, Nevada, Idaho). We removed variants that were found in both the Pando clone samples and this comparative dataset, with the reasoning that common mutations may be germline in origin, or highly mutable sites. 
-
-```
-bcftools isec TO COMPLETE
-```
-Secondly, to minimize the effects of sequencing errors, we removed mutations that were found in only one sample. 
 
 
 Summary table for the *replicate dataset* : 
@@ -30,13 +24,12 @@ Summary table for the *replicate dataset* :
 | 3      | filter crap (without p value tests) | 311551   | [filter_vcf_reps_1.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_reps_1.pl) | 
 | 4      | calculate genotype likelihood and AF | 4607    | [vcf2gl.pl](https://github.com/rozenn-pineau/pando/blob/main/vcf2gl.pl) |
 | 5      | modify AF vector (anything > 0.7 is set to 0, anything between 0.5 and 0.7 is set to 0.5) | 4607     | [filter_af.R](https://github.com/rozenn-pineau/pando/blob/main/filter_af.R) |
-| 6      | calculate point estimate and depth| 4607     | [gl2genet.pl](https://github.com/rozenn-pineau/pando/blob/main/gl2genet.pl) and [getDepth.sh](https://github.com/rozenn-pineau/pando/blob/main/getDepth.pl) |
+| 6      | calculate point estimate and depth | 4607     | [gl2genet.pl](https://github.com/rozenn-pineau/pando/blob/main/gl2genet.pl) and [getDepth.sh](https://github.com/rozenn-pineau/pando/blob/main/getDepth.pl) |
 | 7      | filter for individuals: mean depth > 4 | 4607   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd) |
 | 8      | binarize the point estimates and remove singletons | 4607   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd)  |
 | 9      | keep variants found in >2 samples per group and <=8 groups  | 536   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd)  |
 | 10     | filter vcf based on bool | 536   | [filter_vcf_based_on_bool.py](https://github.com/rozenn-pineau/pando/blob/main/filter_vcf_based_on_bool.py) |
-| 11     | filter individuals with depth <4 | 536   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd) |
-| 12     | remove more crap using the p-value filters | 101   | [vcfFilter_536nps_80inds.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_536nps_80inds.pl) |
+| 11     | remove more crap using the p-value filters | 101   | [vcfFilter_536nps_80inds.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_536nps_80inds.pl) |
 
 
 
@@ -44,18 +37,6 @@ Summary table for the *replicate dataset* :
 
  To assess our ability to consistently recover somatic mutations, we sequenced the same sample several times (12 samples sequenced 8 times each, from the same DNA extraction).
 
-```
-#!/usr/bin/Rscript
-  
-af <- read.table("af_101SNPs_80inds.txt", sep = "\t")
-
-af_mod <- af
-af_mod[af>0.7] <- 0
-af_mod[af>0.5 & af<0.7] <- 0.5
-
-
-write.table(af_mod, "afmod_101SNPs_80inds.txt", sep = "\t", col.names = F, row.names = F)
-```
 
 
 #  Estimating the number of invariant bases
