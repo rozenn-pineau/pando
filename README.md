@@ -12,7 +12,7 @@ We used principal component analysis (PCA) to ordinate the samples and k-means c
 
 ### Step (1) : Initial quality filtering of the vcf files
 
-### Step (2) : rempving "common" mutations
+### Step (2) : removing "common" mutations
 To separate somatic mutations from the pool of genetic variants, we created a set of variants found in the neighboring clones and in 100 \textit{P. tremuloides} samples from the USA's Intermountain region (Colorado, Wyoming, Nevada, Idaho). We removed variants that were found in both the Pando clone samples and this comparative dataset, with the reasoning that common mutations may be germline in origin, or highly mutable sites. 
 
 ```
@@ -34,7 +34,7 @@ Summary table for the *replicate dataset* :
 | 7      | filter for individuals: mean depth > 4 | 4607   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd) |
 | 8      | binarize the point estimates and remove singletons | 4607   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd)  |
 | 9      | keep variants found in >2 samples per group and <=8 groups  | 536   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd)  |
-| 10     | filter vcf based on bool | 536   | (filter_vcf_based_on_bool.py)[https://github.com/rozenn-pineau/pando/blob/main/filter_vcf_based_on_bool.py] |
+| 10     | filter vcf based on bool | 536   | [filter_vcf_based_on_bool.py](https://github.com/rozenn-pineau/pando/blob/main/filter_vcf_based_on_bool.py) |
 | 11     | filter individuals with depth <4 | 536   | [replicates_analysis_v3.R](https://github.com/rozenn-pineau/pando/blob/main/replicate_analysis_v3.Rmd) |
 | 12     | remove more crap using the p-value filters | 101   | [vcfFilter_536nps_80inds.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_536nps_80inds.pl) |
 
