@@ -1,6 +1,13 @@
 # Pando project
 Scripts and notes for the Pando project. 
 
+#  Alignments and variant calling
+
+#  Identifying Pando samples
+
+We identified the Pando samples among all samples based on the point estimates in the large scale dataset (which has both Pando and the surrounding clones), using this script : [identify_pando.R](https://github.com/rozenn-pineau/pando/blob/main/identify_pando.R). All files called in the script can be found in the supplementary material. 
+
+
 #  Estimating the number of invariant bases
 
 ### Step 1 : extract depth from alignments
