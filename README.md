@@ -3,12 +3,66 @@ Scripts and notes for the Pando project.
 
 #  Alignments and variant calling
 
-#  Identifying Pando samples (Figure 1)
+#  Identifying Pando samples
 
 We calculated point estimates for each sample in the large scale dataset (i.e. the posterior mean genotype as a point estimate based on the genotype likelihood from bcftools and a binomial prior based on the allele frequency estimates from the vcf file, [vcf2gl.pl](https://github.com/rozenn-pineau/pando/blob/main/vcf2gl.pl) ).
 We used principal component analysis (PCA) to ordinate the samples and k-means clustering (R kmeans function, with K=2) to label the different clusters of samples and further split the variant file into two files: the Pando variant file and the surrounding clones variant file, with 9 424 and 20 178 SNPs, respectively, see [identify_pando.R](https://github.com/rozenn-pineau/pando/blob/main/identify_pando.R). All files called in the script can be found in the supplementary material. 
 
-#  Filtering for somatic mutations (Figure 2 analyses)
+#  Filtering for somatic mutations
+
+### Step (1) : Initial quality filtering of the vcf files
+
+### Step (2) : rempving "common" mutations
+To separate somatic mutations from the pool of genetic variants, we created a set of variants found in the neighboring clones and in 100 \textit{P. tremuloides} samples from the USA's Intermountain region (Colorado, Wyoming, Nevada, Idaho). We removed variants that were found in both the Pando clone samples and this comparative dataset, with the reasoning that common mutations may be germline in origin, or highly mutable sites. 
+
+```
+bcftools isec TO COMPLETE
+```
+Secondly, to minimize the effects of sequencing errors, we removed mutations that were found in only one sample. 
+
+
+Summary table : 
+
+| Step   | description                        | # mutations for the replicate dataset  | script |
+| -------|:----------------------------------:| ---------:|  -------------------:|
+| 1      | compare to "panel of normals"       | 332120   | add template | 
+| 2      | compare to neighboring clones       | 320081   | add template | 
+| 3      | filter crap (without p value tests) | 311551   | add template | 
+
+
+
+
+ compare to Friends
+filter crap (without p value tests)
+calculate GL and AF
+modify AF vector (anything > 0.7 is set to 0, anything between 0.5 and 0.7 is set to 0.5)
+calculate point estimate using the diploid (somatic mutation script)
+calculate depth
+filter for individuals: mean depth > 4
+binarize the point estimates and remove singletons
+keep variants found in >2 samples per group and <=8 groups 
+filter vcf based on bool
+filter individuals with depth <4 in the vcf
+
+remove more crap using the p-value filters
+
+
+### Step (1) : assessing our ability to recover rare mutations
+
+ To assess our ability to consistently recover somatic mutations, we sequenced the same sample several times (12 samples sequenced 8 times each, from the same DNA extraction).
+
+```
+#!/usr/bin/Rscript
+  
+af <- read.table("af_101SNPs_80inds.txt", sep = "\t")
+
+af_mod <- af
+af_mod[af>0.7] <- 0
+af_mod[af>0.5 & af<0.7] <- 0.5
+
+
+write.table(af_mod, "afmod_101SNPs_80inds.txt", sep = "\t", col.names = F, row.names = F)
+```
 
 
 #  Estimating the number of invariant bases
