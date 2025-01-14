@@ -3,9 +3,12 @@ Scripts and notes for the Pando project.
 
 #  Alignments and variant calling
 
-#  Identifying Pando samples
+#  Identifying Pando samples (Figure 1)
 
-We identified the Pando samples among all samples based on the point estimates in the large scale dataset (which has both Pando and the surrounding clones), using this script : [identify_pando.R](https://github.com/rozenn-pineau/pando/blob/main/identify_pando.R). All files called in the script can be found in the supplementary material. 
+We calculated point estimates for each sample in the large scale dataset (i.e. the posterior mean genotype as a point estimate based on the genotype likelihood from bcftools and a binomial prior based on the allele frequency estimates from the vcf file, [vcf2gl.pl](https://github.com/rozenn-pineau/pando/blob/main/vcf2gl.pl) ).
+We used principal component analysis (PCA) to ordinate the samples and k-means clustering (R kmeans function, with K=2) to label the different clusters of samples and further split the variant file into two files: the Pando variant file and the surrounding clones variant file, with 9 424 and 20 178 SNPs, respectively, see [identify_pando.R](https://github.com/rozenn-pineau/pando/blob/main/identify_pando.R). All files called in the script can be found in the supplementary material. 
+
+#  Filtering for somatic mutations (Figure 2 analyses)
 
 
 #  Estimating the number of invariant bases
