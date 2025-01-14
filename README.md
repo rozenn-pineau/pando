@@ -28,23 +28,16 @@ Summary table :
 | 1      | compare to "panel of normals"       | 332120   | add template | 
 | 2      | compare to neighboring clones       | 320081   | add template | 
 | 3      | filter crap (without p value tests) | 311551   | add template | 
+| 4      | calculate genotype likelihood and AF | 4607    | add template |
+| 5      | modify AF vector (anything > 0.7 is set to 0, anything between 0.5 and 0.7 is set to 0.5) | 4607     | add template |
+| 6      | calculate point estimate and depth| 4607     | add template |
+| 7      | filter for individuals: mean depth > 4 | 4607   | add template |
+| 8      | binarize the point estimates and remove singletons | 4607   | add template |
+| 9      | keep variants found in >2 samples per group and <=8 groups  | 536   | add template |
+| 10     | filter vcf based on bool | 536   | add template |
+| 11     | filter individuals with depth <4 | 536   | add template |
+| 12     | remove more crap using the p-value filters | 101   | add template |
 
-
-
-
- compare to Friends
-filter crap (without p value tests)
-calculate GL and AF
-modify AF vector (anything > 0.7 is set to 0, anything between 0.5 and 0.7 is set to 0.5)
-calculate point estimate using the diploid (somatic mutation script)
-calculate depth
-filter for individuals: mean depth > 4
-binarize the point estimates and remove singletons
-keep variants found in >2 samples per group and <=8 groups 
-filter vcf based on bool
-filter individuals with depth <4 in the vcf
-
-remove more crap using the p-value filters
 
 
 ### Step (1) : assessing our ability to recover rare mutations
