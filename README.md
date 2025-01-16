@@ -208,13 +208,7 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 
 ### Step 1 : Filtering for somatic mutations and converting to nexus format 
 
-The nexus file was obtained by concatenating the set of somatic SNPs with binary coding of the presence of the homozygote genotype with one of the base pair (for example, "T"), a heterozygote with another base pair (for example, "A") and a missing site (no variant calling information for that site) with an "N".
-See the scripts in R: 
-
-[prep_data_for_beast_pando.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_pando.Rmd)
-
-
-[prep_data_for_beast_finescale.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_finescale.Rmd)
+The nexus file was obtained by concatenating the set of somatic SNPs with binary coding of the presence of the homozygote genotype with one of the base pair (for example, "T"), a heterozygote with another base pair (for example, "A") and a missing site (no variant calling information for that site) with an "N". To establish the relationship between the phylogenetic tree height and the proportion of missing mutations, we also generated .nexus files where we kept 15%, 30%, 60% and 90% of the mutations (see [prep_data_for_beast_pando.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_pando.Rmd) and [prep_data_for_beast_finescale.Rmd](https://github.com/rozenn-pineau/pando/blob/main/prep_data_for_beast_finescale.Rmd)). 
 
 ### Step 2 : Specify model parameters using Beauti
 
@@ -224,8 +218,14 @@ We used the software package BEAST (version 2.7.5) to estimate the height of the
 
 We manually added the following line to all xml after the data block, to take into account invariant bases:
 
+**large-scale dataset**
 ```
     <data id='pando_3498snps_102inds_cstsites' spec='FilteredAlignment' filter='-' data='@pando_3498snps_102inds' constantSiteWeights='0 0 0 6614510'/>
+```
+
+**fine-scale dataset**
+```
+    <data id='pando_3034snps_101inds_cstsites' spec='FilteredAlignment' filter='-' data='@pando_3034snps_101inds' constantSiteWeights='0 0 0 6138743'/>
 ```
 
 ### Step 4 : Run Beast 
