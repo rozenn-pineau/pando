@@ -10,12 +10,14 @@ We used principal component analysis (PCA) to ordinate the samples and k-means c
 
 #  Filtering for somatic mutations
 
-### Replicates dataset steps
-To separate somatic mutations from the pool of genetic variants, we created a set of variants found in the neighboring clones and in 100 \textit{P. tremuloides} samples from the USA's Intermountain region (Colorado, Wyoming, Nevada, Idaho). We removed variants that were found in both the Pando clone samples and this comparative dataset, that we called the "panel of normals", with the reasoning that common mutations may be germline in origin, or highly mutable sites (steps 1 and 2 in the table). We did an initial quality filtering step (step 3), and calculated the genotype likelihoods and allele frequencies (step 4). Some allele frequencies being sometimes > 0.5, we decided to modify the allele frequency vector as we do not expect somatic mutations to be widespread (shared by all individuals). The Pando clone is triploid, which reduces our expectation for fixation of a mutation to 0.33. We thus transformed the allele frequency file to remove any variants with AF > 0.7, and reduced to 0.5 AF comprised between 0.5 and 0.7 (Step 5). We then calculated the point estimate based on this modified allele frequency, and the depth at each site and each variant (step 6). We filtered out individuals with a mean depth < 4x (step 7), binarized the point estimates and removed singletons (step 8). For the replicate dataset, because we have up to 8 times the same DNA and because we want to keep the variants present in less than 80% of the population, we kept the variants found in >2 samples per group and <=8 groups (step 9). We came back to the vcf, ans we kept the variants that passed all the previous filters (step 10). Finally, we re-filtered the vcf files, this time with the Mann-Whitney tests of base quality, mapping quality and read position bias (step 11). 
+### Assessing our ability to recover rare mutations using a replicate dataset
+
+To assess our ability to consistently recover somatic mutations, we sequenced the same sample several times (12 samples sequenced 8 times each, from the same DNA extraction). 
+
+To separate somatic mutations from the pool of genetic variants, we created a set of variants found in the neighboring clones and in 100 _P. tremuloides_ samples from the USA's Intermountain region (Colorado, Wyoming, Nevada, Idaho). We removed variants that were found in both the Pando clone samples and this comparative dataset, that we called the "panel of normals", with the reasoning that common mutations may be germline in origin, or highly mutable sites (steps 1 and 2 in the table). We did an initial quality filtering step (step 3), and calculated the genotype likelihoods and allele frequencies (step 4). Some allele frequencies being sometimes > 0.5, we decided to modify the allele frequency vector as we do not expect somatic mutations to be widespread (shared by all individuals). The Pando clone is triploid, which reduces our expectation for fixation of a mutation to 0.33. We thus transformed the allele frequency file to remove any variants with AF > 0.7, and reduced to 0.5 AF comprised between 0.5 and 0.7 (Step 5). We then calculated the point estimate based on this modified allele frequency, and the depth at each site and each variant (step 6). We filtered out individuals with a mean depth < 4x (step 7), binarized the point estimates and removed singletons (step 8). For the replicate dataset, because we have up to 8 times the same DNA and because we want to keep the variants present in less than 80% of the population, we kept the variants found in >2 samples per group and <=8 groups (step 9). We came back to the vcf, ans we kept the variants that passed all the previous filters (step 10). Finally, we re-filtered the vcf files, this time with the Mann-Whitney tests of base quality, mapping quality and read position bias (step 11). 
 
 
-
-Summary table for the *replicate dataset* : 
+Summary table for the **replicate dataset** : 
 
 | Step   | description                        | # mutations  | script |
 | -------|:----------------------------------:| ---------:|  -------------------:|
@@ -32,11 +34,26 @@ Summary table for the *replicate dataset* :
 | 11     | remove more crap using the p-value filters | 101   | [vcfFilter_536nps_80inds.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_536nps_80inds.pl) |
 
 
+### Filtering somatic mutation in the large-scale and fine-scale datasets
 
-### Step (1) : assessing our ability to recover rare mutations
+The variants were called in the fine-scale and large-scale datasets together. We filtered both files together for the first steps :
 
- To assess our ability to consistently recover somatic mutations, we sequenced the same sample several times (12 samples sequenced 8 times each, from the same DNA extraction).
+Summary table for the **large-scale and fine scale datasets** : 
 
+| Step   | description                        | # mutations  | script |
+| -------|:----------------------------------:| ---------:|  -------------------:|
+| 1      | compare to "panel of normals"       | 519721   | [compare_vcfs_template.sh](https://github.com/rozenn-pineau/pando/blob/main/compare_vcfs_template.sh) | 
+| 2      | compare to neighboring clones       | 507724   | [compare_vcfs_template.sh](https://github.com/rozenn-pineau/pando/blob/main/compare_vcfs_template.sh) | 
+| 3      | filter crap (with p value filters) | 15925    | [same as vcfFilter_536nps_80inds.pl](https://github.com/rozenn-pineau/pando/blob/main/vcfFilter_536nps_80inds.pl)  | 
+| 4      | calculate genotype likelihood and AF | 15925    | [vcf2gl.pl](https://github.com/rozenn-pineau/pando/blob/main/vcf2gl.pl) |
+| 5      | modify AF vector (anything > 0.7 is set to 0, anything between 0.5 and 0.7 is set to 0.5) | 15925     | [filter_af.R](https://github.com/rozenn-pineau/pando/blob/main/filter_af.R) |
+| 6      | calculate point estimate and depth | 15925     | [gl2genet.pl](https://github.com/rozenn-pineau/pando/blob/main/gl2genet.pl) and [getDepth.sh](https://github.com/rozenn-pineau/pando/blob/main/getDepth.pl) |
+| 7      | filter for individuals: mean depth > 4 | 15925   | [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd) |
+| 8      | binarize the point estimates and remove singletons | 5082   | [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd)  |
+| 9      | keep variants found in <= 80 % of the samples  | 5082   | [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd)  |
+| 10     | filter vcf based on bool | 5082  | [filter_vcf_based_on_bool.py](https://github.com/rozenn-pineau/pando/blob/main/filter_vcf_based_on_bool.py) |
+
+At this step, we separated the fine-scale and the large-scale datasets. For each, we removed empty variants or singletons (see [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd)). We proceeded with these datasets for the (1) spatial analyses, and (2) age estimations. 
 
 
 #  Estimating the number of invariant bases
