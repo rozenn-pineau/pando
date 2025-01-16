@@ -56,7 +56,17 @@ Summary table for the **large-scale and fine scale datasets** :
 At this step, we separated the fine-scale and the large-scale datasets. For each, we removed empty variants or singletons (see [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd)). We proceeded with these datasets for the (1) spatial analyses, and (2) age estimations. 
 
 
-#  Estimating the number of invariant bases
+#  Spatial analyses
+## Large-scale
+
+## Fine-scale
+
+
+
+
+#  Age estimations
+
+##  Estimating the number of invariant bases
 
 ### Step 1 : extract depth from alignments
 ```
@@ -194,7 +204,7 @@ cat invar_bases_pando.fa | grep -v "^>" | sort | uniq -c
 #--> a total of #6138743 invariant bases. 
 ```
 
-#  Running BEAST2 
+##  Running BEAST2 
 
 ### Step 1 : Filtering for somatic mutations and converting to nexus format 
 
