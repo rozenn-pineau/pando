@@ -1,0 +1,273 @@
+---
+title: "Filter somatic muations in the large scale anf fine scale datasets"
+output: html_document
+date: "2024-05-14"
+---
+
+### Dataset details
+
+The variants were called on the 2018 and 2022 dataset. <br />
+filters applied so far : SNPs removed when found in PON + Friends + "crap" + modified allele frequency vector + somatic point estimate script
+
+# -----------------------------------------------------------------------------
+# Step 1: point estimates with modified allele frequencies
+# -----------------------------------------------------------------------------
+
+Filter for mean individual read depth>4 , empty variants and singletons. 
+
+```{r filter_pn, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list= ls())
+
+library(extrafont)
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/data")
+# upoad pntest data and depth info
+pn_est <- read.table("pntest_som_PS.txt", sep = " ", header = F ) # 15925 x 227
+depth <- read.table("depth_PS.txt", sep = "\t", header = T) # 15925 x 227
+ids <- read.csv("ids_PS.txt", sep = "\t", header = T) # 227 x 4
+
+# Filter individuals based on depth
+par(family = "Times New Roman")
+plot(colMeans(depth), pch = 16, xlab = "individual", ylab = "depth", ylim = c(0,80)) # Mean depth per sample
+abline(h=4, col = "red")
+keep <- which(colMeans(depth) >= 4) # 203
+
+pnt_est_fil <- pn_est[,keep]  # 15925 x 2-3
+ids_fil <- ids[as.numeric(keep), ] # 203 x 4
+depth_fil <- depth[,keep] # 15925 x 203
+# 
+# write.table(ids_fil, "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/ids_PS_sup4.txt",
+#             col.names = T, row.names = F, sep = "\t")
+
+# -----------------------------------------------------------------------------
+# BINARIZATION
+# -----------------------------------------------------------------------------
+# pn_bin <- matrix(NaN, dim(pnt_est_fil)[1], dim(pnt_est_fil)[2])
+# threshold <- 0.5
+# 
+# for (x in 1:dim(pnt_est_fil)[1]) {
+#   
+#   for (y in 1:dim(pnt_est_fil)[2]) {
+#     
+#     if (pnt_est_fil[x,y]>threshold) {pn_bin[x,y] <- 1 } # if proba of being heteroZ > threshold, label with 1
+#     
+#     else {pn_bin[x,y] <- 0 }
+#     
+#   }
+# }
+
+# write.table(pn_bin, "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/data/pnbin_PS.txt", 
+#             sep = "\t", row.names = F, col.names = F)
+
+pn_bin <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/data/pnbin_PS.txt", 
+             sep = "\t", header = F) # 15925 x 203
+  
+nInd <- 203 # number of individuals in the dataset
+hets <- rowSums(pn_bin)/nInd
+# length(which(hets == 0)) # 3250
+# length(which(rowSums(pn_bin)>1)) # 5776
+# length(which(rowSums(pn_bin)==1)) # 6899
+
+# remove singletons, meaning present in 1/nInd individuals AND
+# present in zero individuals (left after filtering out some individuals, maybe)
+
+pn_bin_fil <- pn_bin[c(rowSums(pn_bin)>1),] # 5776 x 203
+hets <- (rowSums(pn_bin_fil))/nInd
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity", ylab = "counts", 100, main = "heterozygosity per SNP, after removing singletons",
+     sub = "Pando + subclone datasets",
+     col = "#2ca25f")
+
+# keep track of indices of the SNPs that make it through the filters
+winners <- 1:c(dim(pn_est)[1]) # 15925
+winners_v1 <- winners[rowSums(pn_bin)>1] #5776
+
+```
+
+
+
+# -----------------------------------------------------------------------------
+# Step 2: Filtering for somatic mutations
+# -----------------------------------------------------------------------------
+
+```{r filter_for_som_mutations}
+nSNP <-  5776
+
+som <- pn_bin_fil[hets<0.8,] 
+winners_v2 <- winners_v1[hets<0.8] 
+hets <- rowSums(som)/nInd
+
+# setwd("/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/figures/") 
+# pdf(file=paste("hets_per_snp_PS.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+# Check the histogram
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity per SNP for somatic set", ylab = "counts", 50, main = "", 
+     col = "#2ca25f")
+
+#dev.off()
+
+# Make a boolean vector to export the SNPs to work with
+bool <- matrix(0, dim(pn_est)[1], 1)
+bool[winners_v2] <- 1 
+
+# write.table(bool, "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/data/bool_filter_PS.txt", 
+#             row.names = F, col.names = F)
+
+```
+# -----------------------------------------------------------------------------
+# GLs for Beast and other analyses
+# -----------------------------------------------------------------------------
+
+```{r preparing_beast_nexus_files}
+# Exporting PS GL file
+# write.table(t(som), "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/gl_PS_5082snps_203inds.txt", 
+#              row.names = F, col.names = F)
+
+
+# Exporting Pando GL file
+som_pando <- som[,ids_fil$group == "pando"] # 2018 pando samples only, 5082 x 102
+remove <- which(rowSums(som_pando) == 0) # empty variants - 643
+som_pando <- som_pando[-remove,] # 4439 x 102
+remove <- which(rowSums(som_pando)==1) # remove singletons - 482
+som_pando <- som_pando[-remove,] 
+
+ids_pando <- ids_fil$full_ID[ids_fil$group == "pando"] 
+
+# write.table(t(som_pando), "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/gl_pando_3957snps_102inds.txt", 
+#              row.names = F, col.names = F)
+
+write.table(t(som_pando_fil), "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/beast/nexus/pando_4439snps_102inds.txt",
+            row.names = F, col.names = F)
+write.table(ids_pando, "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/beast/nexus/pando_ids_102inds.txt",
+            row.names = F, col.names = F)
+# Exporting randomized dropped mutation Pando GL file
+
+# testing if the number of mutations affects the tree structure, and thus the way we would calibrate the age
+# to do this, randomly keep 50% of the mutations
+# sum(rowSums(som_pando_fil)) # 46976 --> need to get rid of 23488 mutations, in random placements
+#
+# som_pando_fil_drop <- som_pando_fil
+# D <- 1000
+# nSNP <- 4439
+# nInd <- 102
+# goal <- 23488
+# counter <- 0
+#
+# for (drop in 1:D) {
+#
+#     # take a snp at random and an individual at random
+#     snp <- sample(1:nSNP, 500, replace = T)
+#     ind <- sample(1:nInd, 500, replace = T)
+#
+#     for (i in 1:length(snp)) {
+#
+#       if (som_pando_fil_drop[snp[i],ind[i]]==1) {
+#
+#           som_pando_fil_drop[snp[i],ind[i]] <- 0
+#           counter <- counter + 1
+#       }
+#
+#     }
+#
+#     if (counter >= goal) { break }
+# }
+#
+# sum(rowSums(som_pando_fil_drop)) # looks good!
+#
+# # get rid of the empty snps
+# remove <- which(rowSums(som_pando_fil_drop) == 0) # empty variants - 550
+# som_pando_fil_drop_fil <- som_pando_fil_drop[-remove,] # 4439 x 102
+# # write.table(t(som_pando_fil_drop_fil), "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/2_PS/beast/0_nexus/pando_drop_half_snps_102inds.txt",
+# #             row.names = F, col.names = F)
+
+
+# Exporting Subclone GL file
+som_subclone <- som[,!ids_fil$group == "pando"] # 2022 subclone samples
+ids_subclone <- ids_fil[!ids_fil$group == "pando",]
+# get rid of the empty snps
+remove <- which(rowSums(som_subclone) == 0) # empty variants - 1395
+som_subclone <- som_subclone[-remove,] # 3687 x 101
+# remove singletons
+remove <- which(rowSums(som_subclone)==1) # 640
+som_subclone <- som_subclone[-remove,] # 3047 x 101
+
+# write.table(t(som_subclone), "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/gl_subclone_3047snps_101inds.txt", 
+#              row.names = F, col.names = F)
+
+```
+
+
+```{r preparing_beast_nexus_files_finer_scale_dataset_only}
+# Exporting Pando GL file
+som_pando <- som[,ids_fil$group == "subclone"] # 2018 pando samples only, 5082 x 101
+remove <- which(rowSums(som_pando) == 0) # empty variants - 1395
+som_pando <- som_pando[-remove,] # 3687 x 101
+remove <- which(rowSums(som_pando)==1) # remove singletons - 640
+som_pando <- som_pando[-remove,] # 3047 
+
+ids_pando <- ids_fil$full_ID[ids_fil$group == "subclone"] 
+
+# Exporting randomized dropped mutation Pando GL file
+
+# testing if the number of mutations affects the tree structure, and thus the way we would calibrate the age
+# to do this, randomly keep 10, 30, 60, 90% of the mutations
+sum(rowSums(som_pando)) # 32885
+#
+
+som_pando_fil_drop <- som_pando
+D <- 1000
+nSNP <- 3047
+nInd <- 101
+goal <- 32885*0.7 # drop 0.4 is keep 0.6 / drop 0.7 is keep 0.3
+counter <- 0
+
+for (drop in 1:D) {
+
+    # take a snp at random and an individual at random
+    snp <- sample(1:nSNP, 500, replace = T)
+    ind <- sample(1:nInd, 500, replace = T)
+
+    for (i in 1:length(snp)) {
+
+      if (som_pando_fil_drop[snp[i],ind[i]]==1) {
+
+          som_pando_fil_drop[snp[i],ind[i]] <- 0
+          counter <- counter + 1
+      }
+
+    }
+
+    if (counter >= goal) { break }
+}
+
+goal
+counter
+drop
+sum(rowSums(som_pando_fil_drop))*0.3 # looks good!
+
+
+# get rid of the empty snps
+remove <- which(rowSums(som_pando_fil_drop) == 0) # empty variants - 550
+som_pando_fil_drop_fil <- som_pando_fil_drop[-remove,] # 4439 x 102
+dim(som_pando_fil_drop_fil)
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/0_gl_binary/subclone/")
+write.table(t(som_pando_fil_drop_fil), "subclone_2470snps_101inds.txt", row.names = F, col.names = F)
+
+
+# Exporting Subclone GL file
+som_subclone <- som[,!ids_fil$group == "pando"] # 2022 subclone samples
+ids_subclone <- ids_fil[!ids_fil$group == "pando",]
+# get rid of the empty snps
+remove <- which(rowSums(som_subclone) == 0) # empty variants - 1395
+som_subclone <- som_subclone[-remove,] # 3687 x 101
+# remove singletons
+remove <- which(rowSums(som_subclone)==1) # 640
+som_subclone <- som_subclone[-remove,] # 3047 x 101
+
+# write.table(t(som_subclone), "/Users/rpineau3/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/gl_subclone_3047snps_101inds.txt", 
+#              row.names = F, col.names = F)
+
+```
