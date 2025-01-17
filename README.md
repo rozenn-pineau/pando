@@ -10,6 +10,8 @@ Scripts and notes for the Pando project.
 
 [Filtering for somatic mutations](#Filtering-for-somatic-mutations)
 
+[Spatial analyses](#Spatial-analyses)
+
 [Age estimations](#Age-estimations)
 
 
@@ -177,10 +179,15 @@ At this step, we separated the fine-scale and the large-scale datasets. For each
 
 
 #  Spatial analyses
+
 ## Large-scale
+To look into the spatial distribution of somatic mutations in the large-scale dataset, we calculated genetic distance between pairs of samples, and physical distance between groups of samples sharing one mutation (see
+[pando_spatial_signal.Rmd](https://github.com/rozenn-pineau/pando/blob/main/pando_spatial_signal.Rmd)).
 
 ## Fine-scale
 
+To look into the spatial distribution of somatic mutations in the fine-scale dataset, we used the same approach as above, and calculated genetic distance between pairs of samples, and physical distance between groups of samples sharing one mutation (see
+[fine_scale_spatial_signal.Rmd](https://github.com/rozenn-pineau/pando/blob/main/fine_scale_spatial_signal.Rmd)).
 
 
 
