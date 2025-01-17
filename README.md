@@ -1,6 +1,48 @@
 # Pando project
 Scripts and notes for the Pando project. 
 
+#  Raw reads preparation
+We split the raw fastq files into subfiles to clean the adapter sequences from the 3' end and replace each barcode to their coresponding sample ID ([RunParseFork.pl](https://github.com/rozenn-pineau/pando/blob/main/RunParseFork.pl) and [parse_barcodes768.pl](https://github.com/rozenn-pineau/pando/blob/main/parse_barcodes768.pl)). 
+```
+#!/bin/sh 
+#SBATCH --time=36:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=24
+#SBATCH --account=gompert-np
+#SBATCH --partition=gompert-np
+#SBATCH --job-name=barcodes
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rpineau3@gatech.edu
+
+module load perl
+
+cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/
+
+perl RunParseFork.pl ../raw/split/split_2*
+```
+We then sorted the reads by sample in their individual files ([splitFastq.pl](https://github.com/rozenn-pineau/pando/blob/main/splitFastq.pl)).
+
+```
+#!/bin/sh 
+#SBATCH --time=30:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=10
+#SBATCH --account=gompert-np
+#SBATCH --partition=gompert-np
+#SBATCH --job-name=splitfq
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rpineau3@gatech.edu
+
+module load perl
+
+cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/parsed/
+
+perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/splitFastq.pl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/ids.txt parsed_final.fastq
+
+```
+We also filter PhiX sequences by aligning to the PhiX reference genome ([PhiXFilterFork.pl](https://github.com/rozenn-pineau/pando/blob/main/PhiXFilterFork.pl)).
+
+
 #  Alignments and variant calling
 
 #  Identifying Pando samples
