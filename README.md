@@ -106,9 +106,9 @@ perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/S
 
 ```
 
-We applied initial basic quality filters on the vcf file for the initial analysis of identifying the Pandio samples ([Identifying Pando samples](#identify-pando)) and additional filtering steps, which are detailed in the section "Filtering for somatic mutations".
+We applied initial basic quality filters on the vcf file for the initial analysis of identifying the Pandio samples ([Identifying Pando samples](#Identifying-Pando-samples)) and additional filtering steps, which are detailed in the section "Filtering for somatic mutations".
 
-#identify-pando
+
 #  Identifying Pando samples
 
 We calculated point estimates for each sample in the large scale dataset (i.e. the posterior mean genotype as a point estimate based on the genotype likelihood from bcftools and a binomial prior based on the allele frequency estimates from the vcf file, [vcf2gl.pl](https://github.com/rozenn-pineau/pando/blob/main/vcf2gl.pl) ).
