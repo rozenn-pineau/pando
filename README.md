@@ -173,7 +173,7 @@ Summary table for the **large-scale and fine scale datasets** :
 | 9      | keep variants found in <= 80 % of the samples  | 5082   | [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd)  |
 | 10     | filter vcf based on bool | 5082  | [filter_vcf_based_on_bool.py](https://github.com/rozenn-pineau/pando/blob/main/filter_vcf_based_on_bool.py) |
 
-At this step, we separated the fine-scale and the large-scale datasets. For each, we removed empty variants or singletons (see [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd)). We proceeded with these datasets for the (1) spatial analyses, and (2) age estimations. 
+At this step, we separated the fine-scale and the large-scale datasets. For each, we removed empty variants or singletons (see [filter_som_mut.Rmd](https://github.com/rozenn-pineau/pando/blob/main/filter_som_mut.Rmd)). We proceeded with these datasets for the (1) [spatial analyses](#Spatial-analyses), and (2) [age estimations](#Age-estimations). 
 
 
 #  Spatial analyses
