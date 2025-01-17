@@ -42,6 +42,25 @@ perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/s
 ```
 We also filter PhiX sequences by aligning to the PhiX reference genome ([PhiXFilterFork.pl](https://github.com/rozenn-pineau/pando/blob/main/PhiXFilterFork.pl)).
 
+```
+#!/bin/sh 
+#SBATCH --time=72:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=12
+#SBATCH --account=gompert
+#SBATCH --partition=notchpeak
+#SBATCH --job-name=phixfilter
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rpineau3@gatech.edu
+
+module load perl
+module load bwa
+module load samtools
+
+cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/raw/
+
+perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/PhiXFilterFork.pl R*fastq
+```
 
 #  Alignments and variant calling
 
