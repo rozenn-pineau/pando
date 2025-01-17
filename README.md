@@ -1,6 +1,15 @@
 # Pando project
 Scripts and notes for the Pando project. 
 
+### Sections
+[Raw reads preparation](#Raw-reads-preparation)
+[Alignments and variant calling](#Alignments-and-variant-calling)
+[Identifying Pando samples](#-Identifying-Pando-samples)
+[Filtering for somatic mutations](#Filtering-for-somatic-mutations)
+[Age estimations](#Age-estimations)
+
+
+
 #  Raw reads preparation
 We split the raw fastq files into subfiles to clean the adapter sequences from the 3' end and replace each barcode to their coresponding sample ID ([RunParseFork.pl](https://github.com/rozenn-pineau/pando/blob/main/RunParseFork.pl) and [parse_barcodes768.pl](https://github.com/rozenn-pineau/pando/blob/main/parse_barcodes768.pl)). 
 ```
