@@ -1,0 +1,261 @@
+---
+title: "Fine scale dataset - age estimation"
+output: html_document
+date: "2024-07"
+---
+
+### Dataset details
+- 102 individuals and 3957 snps. <br />
+
+- testing the relationship between tree height and proportion of SNPs in the dataset to take into account missing snps: proportions (of snps kept) tested --> 0.15,0.3,0.6,0.9
+
+
+```{r libraries}
+rm(list= ls())
+
+library(extrafont)
+library(ggtree)
+library(ggplot2)
+library(colourvalues)
+
+```
+
+
+```{r upload_data}
+rm(list= ls())
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/5_results/pando")
+run1 <- read.table("fs_1900snps_101inds.log", sep = "\t", header = T) 
+run2 <- read.table("fs_2692snps_101inds.log", sep = "\t", header = T) 
+run3 <- read.table("fs_2978snps_101inds.log", sep = "\t", header = T)
+run4 <- read.table("fs_3029snps_101inds.log", sep = "\t", header = T)
+run5 <- read.table("fs_3034snps_101inds.log", sep = "\t", header = T)
+
+# clean : keep last 10 000 values and remove tail (anything above 0.5)
+keep <- 10000
+
+l <- length(run1$Tree.height)
+temp <- run1$Tree.height[c(l-keep):l] # keep the last 10000 values
+height_1 <- temp[temp<0.5] # remove tail
+
+l <- length(run2$Tree.height)
+temp <- run2$Tree.height[c(l-keep):l] # keep the last 10000 values
+height_2 <- temp[temp<0.5] # remove tail
+
+l <- length(run3$Tree.height)
+temp <- run3$Tree.height[c(l-keep):l] # keep the last 10000 values
+height_3 <- temp[temp<0.5] # remove tail
+
+l <- length(run4$Tree.height)
+temp <- run4$Tree.height[c(l-keep):l] # keep the last 10000 values
+height_4 <- temp[temp<0.5] # remove tail
+
+l <- length(run5$Tree.height)
+temp <- run5$Tree.height[c(l-keep):l] # keep the last 10000 values
+height_5 <- temp[temp<0.5] # remove tail
+
+# Get mean and std
+means <- c(mean(height_1), mean(height_2), mean(height_3), mean(height_4), mean(height_5)) 
+sds <- c(sd(height_1), sd(height_2), sd(height_3), sd(height_4), sd(height_5)) 
+percent_snp_kept <- c(0.15,0.3,0.6,0.9,1) 
+
+```
+
+Tree height not in years (before transformation to years).
+
+
+```{r fit_lm}
+
+# Prep data to fit linear model
+x <- c(rep(percent_snp_kept[1], length(height_1)),
+       rep(percent_snp_kept[2], length(height_2)),
+       rep(percent_snp_kept[3], length(height_3)),
+       rep(percent_snp_kept[4], length(height_4)),
+       rep(percent_snp_kept[5], length(height_5)))
+
+y <- c(height_1, 
+       height_2, 
+       height_3, 
+       height_4, 
+       height_5)
+
+reg <- lm(y~x)
+summary(reg)
+a <- reg$coefficients[2]
+b <- reg$coefficients[1]
+     #  0.32743 - tree height of Pando
+
+```
+
+
+```{r plot}
+yvals <- a*percent_snp_kept + b
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/6_figures")
+pdf(file=paste("fs_tree_height_missing_snps_relationship.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+plot(percent_snp_kept, yvals, col = "#323232", type = "l", lty = 2, cex = 1.3, xlab = "Proportion of SNPs kept", ylab = "Tree Height", bty = "n", xlim = c(0, 1), ylim = c(0, 0.3))
+arrows(percent_snp_kept, means+sds, percent_snp_kept, means-sds, angle = 90, code = 3, length = 0.08)
+lines(percent_snp_kept, means, type = "p", pch = 21, cex = 1.5, bg = "#323232")
+
+
+# Upload tree 
+#points(3.687992, 0.5275751, pch = 21, bg = "#a6bddb", cex = 1.8)
+
+#legend("topleft", c("Test data points", "Pando clone"), pch = 21, pt.bg = c("black", "#a6bddb"), bty = "n")
+
+```
+
+```{r get_tree_age}
+
+#######################################
+# Parameters
+mu <- 1.33e-10 #somatic mutation rate, per base per haploid genome per year
+g_mu <- 1.99e-9 #per generation somatic mutation rate (one generation here is 15 years)
+SNPtot <- 3034 #number of mutations in this dataset
+BPtot <- 129194577*0.5 #total number of base pair sequenced
+N <- 3 #Ploidy
+
+tree_height_bf_correction <- height_5 # filter out tail of distribution
+
+tree_height_af_correction_1 <- (tree_height_bf_correction / 0.06)*a + b
+
+tree_height_af_correction_2 <- (tree_height_bf_correction * 0.06)*a + b
+
+
+age_bf <- (((tree_height_bf_correction*SNPtot)/BPtot)/mu/3) # age before correction 32423.68
+age_1 <- (((tree_height_af_correction_1*SNPtot)/BPtot)/mu/3) # age after correction - 100 374.6
+age_2 <- (((tree_height_af_correction_2*SNPtot)/BPtot)/mu/3) # 12 145.24
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/6_figures")
+pdf(file=paste("fine_scale_pando_age.pdf", sep="" ), bg = "transparent", width=5.5, height=3, family = "Times New Roman")
+
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+p1 <- density(age_bf) 
+plot(p1, xlim=c(0,13E4), main = "", xlab = "Pando clone age (years)", frame = F, xaxt = "n")
+axis(1, at = c(0, 25000, 50000, 75000, 100000), labels = c(0, "25000", "50000", "75000", "100000"))
+polygon(p1, density = -1, col = "#8dd3c7")
+p2 <- density(age_1) 
+polygon(p2, density = -1, col = "#f0027f")
+p3 <- density(age_2) 
+polygon(p3, density = -1, col = "#762a83")
+
+
+## add a legend in the corner
+legend('topright',c('assumption 1','assumption 2', 'assumption 3'), pch = 22,
+       col = "black",
+      pt.bg = c("#8dd3c7", "#f0027f", "#762a83"), bty = 'n',
+       border = NA)
+
+
+
+# Confidence interval
+mean(age_bf)
+sd(age_bf)
+t.test(age_bf, conf.level = 0.95)$conf.int # age before correction : 33965.58 33980.50 - mean 32423.68
+mean(age_1)
+sd(age_1)
+t.test(age_1, conf.level = 0.95)$conf.int # age before correction : 80993.91 81022.39
+mean(age_2)
+sd(age_2)
+t.test(age_2, conf.level = 0.95)$conf.int # age before correction : 16401.96 16402.06
+# are confidence interval so small because a lot of data??
+
+
+
+```
+
+
+
+
+```{r bayesian_skyline_plot}
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/5_results/pando/dec30/3034/")
+bsp <- fread("bs_data_table.txt")
+# column order in the file :time mean median upper lower
+
+tmp <- (bsp$time * 0.06)*a + b
+tmp2 <- (bsp$time / 0.06)*a + b
+
+bsp$age <- (bsp$time*SNPtot)/BPtot/mu/3
+bsp$age_2 <- (tmp*SNPtot)/BPtot/mu/3
+bsp$age_3 <- (tmp2*SNPtot)/BPtot/mu/3
+
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/6_figures")
+pdf(file=paste("bsp_fine_scale.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+plot(bsp$age, log(bsp$mean), type = "l" , bty = "n", xlim = c(25000, 0), # ylim = c(0,4000),
+     xlab = "Age (years)", ylab = "Effective population size (log)")
+# model before correction
+polygon(c(rev(bsp$age), bsp$age), c(rev(log(bsp$lower)), log(bsp$upper)), col = '#ccece6', border = NA) # add fill
+lines(bsp$age, log(bsp$mean), lwd = 2, col = '#353535' )
+# # 6% mutations are real
+# polygon(c(rev(bsp$age_2), bsp$age_2), c(rev(log(bsp$lower)), log(bsp$upper)), col = '#762a83', border = NA, xlim = c(25000, 0)) # add fill
+# lines(bsp$age_2, log(bsp$mean), lwd = 2, col = '#353535' )
+# # 94% mutations are missing
+# polygon(c(rev(bsp$age_3), bsp$age_3), c(rev(log(bsp$lower)), log(bsp$upper)), col = '#f0027f', border = NA, xlim = c(25000, 0)) # add fill
+# lines(bsp$age_3, log(bsp$mean), lwd = 2, col = '#353535' )
+
+
+
+
+```
+
+```{r phylogeny}
+# load GL for point coloring
+gl <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/gl_pando_3957snps_102inds.txt") # 101 x 3957
+info <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/ids_PS_sup4.txt", sep = "\t", header = T)
+info <- info[which(info$group == "pando"),] # 102 x 7
+
+
+# PCA
+res.pca <- prcomp(gl,center = TRUE) 
+sum_pca <- summary(res.pca)
+
+ax1 <- round(sum_pca$importance[2]*100) # proportion of variance explained by first axis
+ax2 <- round(sum_pca$importance[5]*100) # proportion of variance explained by second axis
+ax3 <- round(sum_pca$importance[8]*100) # proportion of variance explained by second axis
+ax4 <- round(sum_pca$importance[11]*100) # proportion of variance explained by second axis
+
+pc1 <- res.pca$x[,1]
+pc2 <- res.pca$x[,2]
+pc3 <- res.pca$x[,3]
+pc4 <- res.pca$x[,4]
+
+all <- data.frame(cbind(pc1, pc2, pc3, pc4))
+all$cols <- colour_values(all$pc1, palette = "purples")
+info$pc1col <- colour_values(all$pc1, palette = "purples")
+#write.table(all$cols, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/4_scripts/data/cols_pc1_large_scale.txt", col.names = F, row.names = F, sep = "\t")
+
+# PC1 versus PC2 
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure5")
+pdf(file="pca_large_scale.pdf",
+    bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+par(family="Times New Roman", cex.lab=1.5, cex.axis=1.2, cex.main=1.5, cex.sub=1.5)
+#plot.new(xlab=paste("PC1, ", ax1, "%"), ylab=paste("PC2, ", ax2, "%"), bty = "n")
+plot(1, type="n",xlab=paste("PC1, ", ax1, "%"), ylab=paste("PC2, ", ax2, "%"), bty = "n", xlim=c(-7, 7), ylim=c(-7, 7))
+points(all$pc1, all$pc2, pch=16, col = all$cols, cex = 1.3)
+abline(h=0, lty=2, col="grey")
+abline(v=0, lty=2, col="grey")
+
+dev.off()
+
+# phylogeny built from 35000 trees (out of 70 000, 50% burnt) using TreeAnnotator
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/3_results/pando")
+tree <- read.tree("ps_3957snps.tre") # to be saved in Newick format
+tree$edge.length <- ((tree$edge.length*SNPtot)/BPtot)/mu/3
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure5")
+pdf(file="scale.pdf",
+    bg = "transparent", width=10, height=10, family = "Times New Roman")
+
+p1 <- ggtree(tree, layout="circular") %<+% info + 
+  geom_tippoint(aes(color=pc1col), size = 5) +  scale_color_manual(values=info$pc1col) +
+  geom_treescale(fontsize=6, linesize=1, offset=1, width=1000) +theme(legend.position = "none")
+plot(p1)
+
+dev.off()
+```
