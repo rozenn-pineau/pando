@@ -106,7 +106,7 @@ perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/S
 
 ```
 
-We applied initial basic quality filters on the vcf file for the initial analysis of identifying the Pandio samples ([Identifying Pando samples](#Identifying-Pando-samples)) and additional filtering steps, which are detailed in the section "Filtering for somatic mutations".
+We applied initial basic quality filters on the vcf file for the initial analysis of identifying the Pandio samples ([Identifying Pando samples](#Identifying-Pando-samples)) and additional filtering steps, which are detailed in the section [Filtering for somatic mutations](#Filtering-for-somatic-mutations).
 
 
 #  Identifying Pando samples
