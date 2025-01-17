@@ -1,0 +1,342 @@
+---
+title: "Subclone dataset - spatial analysis"
+output: html_document
+date: "2024-05-14"
+---
+
+
+```{r filter_pn, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list= ls())
+
+library(extrafont)
+library(geosphere)
+library(scales)
+
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/")
+ids <- read.csv("ids_PS_sup4.txt", sep = "\t", header = T)
+ids_subclone <- ids[ids$group!="pando",] # 101 x 6 
+som_subclone <- read.table("gl_subclone_3047snps_101inds.txt", sep = " ")
+som_subclone <- t(som_subclone) # 3047 x 101
+
+nInd <- 101
+hets <- rowSums(som_subclone)/nInd
+# Make sure there are no singletons and empty variants, and remove anything above 80%
+idx <- which(hets>1/nInd & hets < 0.8) #3034
+som_subclone <- som_subclone[idx,]
+hets <- rowSums(som_subclone)/nInd
+
+# Check heterozygosity per SNP
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity", ylab = "counts", 100, main = "heterozygosity per SNP",
+     sub = "Subclone 2022 dataset",
+     col = "#2ca25f")
+
+```
+
+
+
+```{r subclone_spatial_analysis}
+# ------------------------------------------------------------------------------------- #
+# Detecting Spatial Signal per individual
+# ------------------------------------------------------------------------------------- #
+
+n_samp <- length(ids_subclone$full_ID)
+
+store_num_common_snp <-  matrix(0, n_samp, n_samp)
+space <-  matrix(0, n_samp, n_samp)
+
+
+n <- 1
+
+for (i in 1:n_samp){  
+  
+  
+  for (j in n:n_samp){
+    
+    store_num_common_snp[i,j] <- length(intersect(which(som_subclone[,i]==1), which(som_subclone[,j]==1) ) ) / mean(length(which(som_subclone[,i]==1)), length(which(som_subclone[,j]==1)))
+    space[i,j] <-  distVincentyEllipsoid(c(ids_subclone$long[i],ids_subclone$lat[i]), c(ids_subclone$long[j],ids_subclone$lat[j]))
+    
+  }
+  
+  n <- n + 1
+}
+
+# correlation between number of variants and space
+val_data <- cor(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)])
+cor.test(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)])
+
+setwd("/Users/rozenn/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures/")
+#pdf(file=paste("Figure4_panelA.pdf", sep="" ), bg = "transparent", width=5, height=4, family = "Times New Roman")
+
+
+# Visualize data
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+plot(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)], pch=16,col="#9e9ac8", cex=1, bty="n",
+     xlab = "Spatial distance (m)", 
+     ylab = "Proportion of shared SNPs/sample")
+# Regression line
+abline(lm(store_num_common_snp[upper.tri(store_num_common_snp)] ~ space[upper.tri(space)]), col = "#353535", lwd = 3)
+legend("top", legend = c("corr. = -0.1"), bty = "n")
+
+#dev.off()
+
+```
+
+
+```{r subclone_spatial_analysis}
+# Randomize the space
+R <- 500 # number of permutations
+val_rdn <- matrix(NA, R, 1)
+
+for (rep in 1:R) {
+  
+  store_num_common_snp <-  matrix(0, n_samp, n_samp)
+  space <-  matrix(0, n_samp, n_samp)
+  
+  # shuffle the samples in space
+  ids_mod_long <- sample(ids_subclone$long)
+  ids_mod_lat <- sample(ids_subclone$lat)
+  
+  n <- 1
+  
+  for (i in 1:n_samp){  
+    
+    
+    for (j in n:n_samp){
+      
+      store_num_common_snp[i,j] <- length(intersect(which(som_subclone[,i]==1), which(som_subclone[,j]==1) ) ) / mean(length(which(som_subclone[,i]==1)), length(which(som_subclone[,j]==1)))
+      space[i,j] <-  distVincentyEllipsoid(c(ids_mod_long[i],ids_mod_lat[i]), c(ids_mod_long[j],ids_mod_lat[j]))
+      
+    }
+    
+    n <- n + 1
+  }
+  
+  val_rdn[rep] <- cor(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)]) 
+  print(rep)
+    
+}
+
+setwd("/Users/rozenn/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures/") 
+#pdf(file=paste("corr_space_nbsharedsnps_cmp_to_rdn.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+
+# correlation between number of variants and space
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(val_rdn, 50, xlab = "Correlation coefficient", xlim = c(-.1, 0.1),
+     main = "", sub = "subclone dataset, 3034 mutations", probability = T) #  
+lines(rep(val_data,2), c(0, 120), col = "red", lwd = 2)
+legend("topright", c("Mean for data", "Mean for randomized dataset"), pch = 22, pt.bg = c("#969696", "red"), bty = "n")
+
+
+#dev.off()
+mean(val_rdn)
+length(which(val_rdn < val_data)) / R #  0.006
+
+
+```
+
+
+
+
+```{r snp_shared_by_2_ramets}
+
+# ------------------------------------------------------------------------------------- #
+# SNPs shared by two ramets
+# ------------------------------------------------------------------------------------- #
+# Initialize 
+store.SNPpairs <- c()
+store.spatial.dist <- c()
+i <- 0
+
+# Find the number of SNPs shared by 2 ramets
+SNPind <- which(rowSums(som_subclone,na.rm=TRUE)==2) # 27
+
+# Start loop
+for (i in 1:length(SNPind)) {
+
+  rametsID <- which(som_subclone[SNPind[i],]==1) # pair of focus
+  
+  # Calculate genetic distance between i and closest neighbour trees
+  spatial.dist <- as.matrix(distm(cbind(ids_subclone$long[rametsID[1]], ids_subclone$lat[rametsID[1]]), cbind(ids_subclone$long[rametsID[2]], ids_subclone$lat[rametsID[2]]), fun=distVincentyEllipsoid))
+  store.spatial.dist <- c(store.spatial.dist, spatial.dist)
+  
+  store.SNPpairs <- c(store.SNPpairs, length(which(rowSums(som_subclone[, rametsID])==2))) # They share one unique mutation, and many more
+  
+}
+
+store.pairs.2 <- store.SNPpairs
+store.spatial.dist.2 <- store.spatial.dist
+
+
+# Plot and save figure - two ramets' SNPs
+# pdf(file="SNPs_shared_by_two_ramets.pdf", bg = "transparent",
+#     width=5.2, height=4, family = "Times New Roman")
+
+par(family="Times New Roman", cex.lab=1.1, cex.axis=1, cex.main=1, cex.sub=1)#, col.lab="white", col.axis = "white")
+
+plot(store.spatial.dist, store.SNPpairs, pch=16,col="#756bb1", cex=1.2, xlim = c(0,160), ylim = c(0,350),
+     xlab = "Spatial distance (m)",
+     ylab = "Number of shared SNPs")
+legend("topright", c("SNPs shared by two ramets"), col = c("#756bb1"), pch=16, cex = 1, bty = "n")
+# Regression line
+# abline(lm(store.SNPpairs ~ store.spatial.dist), col = "red", lwd = 3)
+
+#dev.off()
+
+cor.val.2 <- cor(store.spatial.dist[!is.na(store.spatial.dist)], store.SNPpairs[!is.na(store.spatial.dist)]) # p val not significant
+cor.val.2
+cor.test(store.spatial.dist[!is.na(store.spatial.dist)], store.SNPpairs[!is.na(store.spatial.dist)]) 
+
+# 	Pearson's product-moment correlation
+# 
+# data:  store.spatial.dist[!is.na(store.spatial.dist)] and store.SNPpairs[!is.na(store.spatial.dist)]
+# t = -6.7839, df = 553, p-value = 3.015e-11
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+#  -0.3522812 -0.1985307
+# sample estimates:
+#        cor 
+# -0.2771794 
+
+
+
+```
+
+```{r pairwise_distance_between_samps_with_mut}
+# ------------------------------------------------------------------------------------- #
+# Detecting Spatial Signal per SNP - new threshold
+# ------------------------------------------------------------------------------------- #
+
+# Calculate mean distance between pairs of samples presenting the mutation
+n_SNP <- dim(som_subclone)[1]
+store_mean_dist <-  matrix(NA, n_SNP, 1)
+store_num_samp <-  matrix(NA, n_SNP, 1)
+dist <- c()
+
+for (x in 1:n_SNP ){ 
+  #print(x)
+  samples_idx <- which(som_subclone[x,]==1) # samples that have the mutation
+  start <- 2
+  dist <- c()
+  
+  # I think there might be a mistake in how I calculate the distance here!
+  # Calculate every pairwise distance between samples with the mutation
+  for (i in samples_idx) {
+    
+    for (J in start:length(samples_idx)) {
+      
+      j <- samples_idx[J]
+      dist <- c(dist, distVincentyEllipsoid(c(ids_subclone$long[i],ids_subclone$lat[i]), c(ids_subclone$long[j],ids_subclone$lat[j])) )
+
+    }
+    
+    J <- J + 1 # do not compute the same distance twice
+    
+  }
+  
+  # Store mean pairwise distance for each sample
+  store_mean_dist[x] <- mean(c(dist))
+  store_num_samp[x] <- length(samples_idx)
+
+}
+
+val_data <- mean(store_mean_dist) # 46.34 meters
+
+# Visualize distribution for data
+#setwd("/Users/rozenn/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures/")
+#pdf(file=paste("Figure4_panelC.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+# correlation between number of variants and space
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(store_mean_dist, 50, xlab = "Mean distance within groups sharing one mutation",  xlim = c(0, 85),
+     main = "", sub = "", probability = T, col = "#b2abd2") #  
+
+#dev.off()
+```
+
+
+```{r pairwise_distance_between_samps_with_mut}
+# Randomization - on the cluster, script is here: /uufs/chpc.utah.edu/common/home/u6028866/Pando/R_analyses/pando/
+# Upload data
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data")
+rand <- read.table("mean_dist_500_subclone.txt") # 250 x  1 - update when it reaches 500
+46.344
+
+mean(rand$V1)
+
+```
+
+
+```{r randomize}
+
+# Calculate mean distance between pairs of samples presenting the mutation
+n_SNP <- dim(som_subclone)[1]
+P <- 10 # nb of permutations
+store_mean_dist <-  matrix(NA, n_SNP, 1)
+store_mean_rand_dist <-  matrix(NA, P, 1)
+store_num_samp <-  matrix(NA, n_SNP, 1)
+dist <- c()
+rand_dist <- c()
+
+
+for (p in 1:P) {
+  
+  # shuffle the samples in space
+  ids_mod_long <- sample(ids_subclone$long)
+  ids_mod_lat <- sample(ids_subclone$lat)
+  
+  for (x in 1:n_SNP ){ 
+    #print(x)
+    samples_idx <- which(som_subclone[x,]==1) # samples that have the mutation
+    start <- 2
+    dist <- c()
+    
+    # I think there might be a mistake in how I calculate the distance here!
+    # Calculate every pairwise distance between samples with the mutation
+    for (i in samples_idx) {
+      
+      for (J in start:length(samples_idx)) {
+        
+        j <- samples_idx[J]
+        dist <- c(dist, distVincentyEllipsoid(c(ids_mod_long[i],ids_mod_lat[i]), c(ids_mod_long[j],ids_mod_lat[j])) )
+  
+      }
+      
+      j <- j + 1 # do not compute the same distance twice
+      
+    }
+    
+    # Store mean pairwise distance for each sample
+    store_mean_dist[x] <- mean(c(dist))
+    store_num_samp[x] <- length(samples_idx)
+  
+  }
+  
+  store_mean_rand_dist[p] <- mean(store_mean_dist) 
+  print(p)
+
+}
+```
+
+
+```{r visualize}
+
+plot(store_mean_dist, store_num_samp, pch = 16, xlab = "Mean distance between samples within a group", ylab = "Number of samples within the group ")
+
+# a group has 20 samples and a mean distanc of 0 ? which snp does that correspond to?
+which(store_mean_dist ==0 & store_num_samp >= 19 & store_num_samp < 20 )
+idx <- which(som_subclone[92,] == 1)
+ids_subclone[idx, ]
+store_mean_dist[92]
+```
+
+
+
+
+
+
+
