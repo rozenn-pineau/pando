@@ -380,13 +380,15 @@ All xmls used in the study are under the [xml folder](https://github.com/rozenn-
 
 
 ### Step 5 : Analyze .log and .trees files
-We base our age estimation on the conversion of the phylogenetic tree height to an age in years. This was done in R based on the .log file. 
 
-To visualize effective population size through time, we used Beast Traver v1.7.2 to reconstruct the Bayesian Skyline, under "Analysis", "Bayesian Skyline reconstruction" and saving the output data table. 
+We base our age estimation on the conversion of the phylogenetic tree height to an age in years. 
+
+To take into account missing mutations in our age estimation, we first determined the relationship between missing mutations and phylogenetic tree height by randomly keeping 15%, 30%, 60% or 90% of the mutations. We used the linear relationship that we obtained between the proportion of missing mutations and the phylogenetic tree height to make our different age estimations. These analyses and plots were done in R ([age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
 
 
-R scripts to plot Beast results : 
+To visualize effective population size through time, we used Beast Tracer v1.7.2 to reconstruct the Bayesian Skyline, under "Analysis", "Bayesian Skyline reconstruction" and saving the output data table. The plot was done in R ([age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
 
+To construct the Pando samples phylogeny, we first summarized the trees from the Beast output using TreeAnnotator v2.7.6. We then saved the tree output from FigTree to plot in R ([age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
 
 
 
