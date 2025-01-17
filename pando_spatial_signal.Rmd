@@ -1,0 +1,344 @@
+---
+title: "Pando dataset - spatial analysis"
+output: html_document
+date: "2024-06"
+---
+
+# ----------------------------------------------------------------------------- #
+# upload data
+# ----------------------------------------------------------------------------- #
+
+
+```{r filter_pn, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list= ls())
+
+library(extrafont)
+library(geosphere)
+library(scales)
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/")
+# sample and coordinate info
+ids <- read.csv("ids_PS_sup4.txt", sep = "\t", header = T) # 203 x 6
+ids <- ids[ids$group == "pando",] # 102 x 6
+# point estimates
+som <- read.table("gl_pando_3957snps_102inds.txt", sep = " ")
+som <- t(som) # 3957 x 102
+
+nInd <- 102
+hets <- rowSums(som)/nInd
+# Make sure there are no singletons and empty variants, and remove anything above 80%
+idx <- which(hets>1/nInd & hets < 0.8) # 3942
+som <- som[idx,] # 3942 x 102
+hets <- rowSums(som)/nInd
+
+# Check heterozygosity per SNP
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(hets, xlab = "Heterozygosity", ylab = "counts", 100, main = "heterozygosity per SNP",
+     sub = "Pando (2018) dataset",
+     col = "#2ca25f")
+
+
+n_samp <- length(ids$full_ID)
+
+```
+# ----------------------------------------------------------------------------- #
+# Spatial structure tests - per sample
+# ----------------------------------------------------------------------------- #
+
+
+
+```{r spatial_structure_per_individual}
+# ------------------------------------------------------------------------------------- #
+# Detecting Spatial Signal per individual
+# ------------------------------------------------------------------------------------- #
+# Calculate number of shared SNP and mean Euclidean distance between pairs of samples, compare to random
+
+store_num_common_snp <-  matrix(0, n_samp, n_samp)
+space <-  matrix(0, n_samp, n_samp)
+
+
+n <- 1
+
+for (i in 1:n_samp){  
+  
+  
+  for (j in n:n_samp){
+    
+    store_num_common_snp[i,j] <- length(intersect(which(som[,i]==1), which(som[,j]==1) ) ) / mean(length(which(som[,i]==1)), length(which(som[,j]==1)))
+    space[i,j] <-  distVincentyEllipsoid(c(ids$long[i],ids$lat[i]), c(ids$long[j],ids$lat[j]))
+    
+  }
+  
+  n <- n + 1
+}
+
+#complete the matrix (symmetric)
+space[lower.tri(space)]  <- t(space)[lower.tri(space)]
+
+# correlation between number of variants and space
+val_data <- cor(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)])
+cor.test(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)])
+
+# 	Pearson's product-moment correlation
+# 
+# data:  space[upper.tri(space)] and store_num_common_snp[upper.tri(store_num_common_snp)]
+# t = -1.8117, df = 5149, p-value = 0.07008
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+#  -0.052514184  0.002070934
+# sample estimates:
+#         cor 
+# -0.02524044 
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures") 
+pdf(file=paste("Figure4_panelC.pdf", sep="" ), bg = "transparent", width=5, height=4, family = "Times New Roman")
+
+
+# Visualize data
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+plot(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)], pch=16,col="#9e9ac8", cex=1, bty="n",
+     xlab = "Spatial distance (m)", 
+     ylab = "Proportion of shared SNPs per sample")
+# Regression line
+abline(lm(store_num_common_snp[upper.tri(store_num_common_snp)] ~ space[upper.tri(space)]), col = "#353535", lwd = 3)
+legend("topright", legend = c("corr. = -0.02"), bty = "n")
+
+dev.off()
+summary(store_num_common_snp[upper.tri(store_num_common_snp)])
+```
+
+
+```{r spatial_structure_per_snp}
+# Randomize the space
+R <- 1000 # number of permutations 
+val_rdn <- matrix(NA, R, 1)
+
+for (rep in 1:R) {
+  
+  idx_rdn <- sample(1:length(ids$long)) #102
+  space_rdn <- space[idx_rdn,idx_rdn] #re-evaluate space matrix #102 x 102
+
+  #re-evaluate correlation
+  val_rdn[rep] <- cor(space_rdn[upper.tri(space_rdn)], store_num_common_snp[upper.tri(store_num_common_snp)]) 
+  
+    
+}
+
+# pdf(file=paste("/Users/rozenn/Dropbox (GaTech)/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures/pando_corr_snps_nbsharedsnps_cmp_to_rdn.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+# correlation between number of variants and space
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(val_rdn, 50, xlab = "Correlation coefficient", xlim = c(-0.15, 0.15), sub = "", main = "") 
+lines(rep(val_data,2), c(0, 120), col = "red", lwd = 2)
+legend("topright", c("Mean for data", "Mean for randomized dataset"), pch = 22, pt.bg = c("#969696", "red"), bty = "n")
+
+# dev.off()
+
+# calculate one-tail p-value
+mean(val_rdn) # -0.001
+length(which(val_rdn < val_data)) / length(val_rdn) # 0.271
+```
+
+
+
+
+
+
+```{r rdn_mutations}
+# In the chunk above, we randomize space. Now we will randomize mutations within individuals to compare the data with a null expectation. 
+
+# Randomize the samples genetic information
+R <- 1000 # number of permutations 
+val_rdn <- matrix(NA, R, 1)
+som_rdn <- matrix(NA, dim(som)[1], dim(som)[2])
+
+
+for (rep in 1:R) {
+  
+    #randomize mutation order for every sample
+    for (s in 1:dim(som)[2]) {
+    
+      som_rdn[,s] <- som[sample(1:dim(som)[1]), s]
+    
+    } 
+  
+    #re-evaluate genetic distance (number of shared SNP per sample)
+    store_num_common_snp <-  matrix(0, n_samp, n_samp)
+    n <- 1
+    
+    for (i in 1:n_samp){  
+
+      for (j in n:n_samp){
+      
+      store_num_common_snp[i,j] <- length(intersect(which(som_rdn[,i]==1), which(som_rdn[,j]==1) ) ) / mean(length(which(som_rdn[,i]==1)), length(which(som_rdn[,j]==1)))
+
+      }
+      n <- n + 1
+    }
+    
+    store_num_common_snp[lower.tri(store_num_common_snp)]  <- t(store_num_common_snp)[lower.tri(store_num_common_snp)]
+    
+  #re-evaluate correlation with spatial distance
+  val_rdn[rep] <- cor(space[upper.tri(space)], store_num_common_snp[upper.tri(store_num_common_snp)]) 
+  print(rep)
+    
+}
+
+# write(val_rdn, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/pando_sommut_permutations_corr.txt", sep = "\t", append = T, ncolumns = 1)
+
+uploaded_data <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/pando_sommut_permutations_corr.txt", sep = "\t")
+
+#500 permutations total for this one
+pdf(file=paste("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures/pando_corr_permut_snps.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+# correlation between number of variants and space
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(uploaded_data$V1, 25 , xlim = c(-0.05, 0.05),
+     main = "", xlab = "Correlation coefficient", probability = T) #  
+lines(rep(val_data,2), c(0, 120), col = "red", lwd = 2)
+legend("topright", c("Mean for data", "Mean for randomized dataset"), pch = 22, pt.bg = c("#969696", "red"), bty = "n")
+
+dev.off()
+
+( length(which(uploaded_data$V1 < val_data))/length(uploaded_data$V1) ) #0
+
+
+```
+# ----------------------------------------------------------------------------- #
+# Spatial structure - per SNP
+# ----------------------------------------------------------------------------- #
+
+```{r pairwise_distance_between_samps_with_mut}
+#prep distance matrix
+space[lower.tri(space)]  <- t(space)[lower.tri(space)]
+
+# Calculate mean distance between pairs of samples presenting the mutation
+n_SNP <- dim(som)[1]
+store_mean_dist <-  matrix(NA, n_SNP, 1)
+store_max_dist <-  matrix(NA, n_SNP, 1)
+store_num_samp <-  matrix(NA, n_SNP, 1)
+dist <- c()
+
+for (x in 1:n_SNP ){ 
+  #print(x)
+  samples_idx <- which(som[x,]==1) # samples that have the mutation
+  start <- 2
+  dist <- c()
+  
+  if (length(samples_idx) > 1) {
+    
+          # Calculate every pairwise distance between samples with the mutation
+      for (i in samples_idx) {
+        
+        for (J in start:length(samples_idx)) {
+          
+          j <- samples_idx[J]
+          dist <- c(dist, space[i, j] )
+        }
+        
+        J <- J + 1 # do not compute the same distance twice
+        
+      }
+    
+  }
+
+  
+  # Store mean pairwise distance for each sample
+  store_mean_dist[x] <- mean(dist, na.rm=T)
+  store_max_dist[x] <- max(dist, na.rm=T)
+  store_num_samp[x] <- length(samples_idx)
+  
+}
+
+(val_data_mean <- mean(store_mean_dist, na.rm=T)) # 264.28 meters
+(val_data_max <- mean(store_max_dist, na.rm=T)) # 610.4104 meters
+
+# Visualize distribution for data
+pdf(file=paste("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures/Figure3_panelA.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+# correlation between number of variants and space
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(store_mean_dist, 50, xlab = "Mean distance within groups sharing one mutation",  xlim = c(0, 500),
+     main = "", probability = T, col = "#b2abd2") #  
+
+
+dev.off()
+```
+```{r permutation_mean}
+#calculate the mean pairwise distances of the samples sharing one mutation for every mutation with permurations of the space matrix
+
+R <- 1 # number of permutations
+n_SNP <- dim(som)[1]
+mean_dataset <- matrix(NA, R, 1)
+
+for (rep in 1:R) {
+      
+      print(rep)
+      
+      # shuffle the samples in space
+      idx_rdn <- sample(1:length(ids$long)) #102
+      space_rdn <- space[idx_rdn,idx_rdn] #re-evaluate space matrix #102 x 102
+      
+      store_mean_dist <-  matrix(NA, n_SNP, 1)
+ 
+        # Calculate mean distance between pairs of samples presenting the mutation
+      for (x in 1:n_SNP ){ 
+          samples_idx <- which(som[x,]==1) # samples that have the mutation
+          start <- 2
+          
+        
+          #check that sample_idx is >1
+          if (length(samples_idx)>1) {
+            
+                dist <- c()
+          
+                # Calculate every pairwise distance between samples with the mutation
+                for (i in samples_idx) {
+                  
+                  for (J in start:length(samples_idx)) {
+                        
+                        j <- samples_idx[J]
+                        dist <- c(dist, space_rdn[i,j])
+                  
+                      }
+                      
+                      J <- J + 1 # do not compute the same distance twice
+                }
+              
+               # Store mean pairwise distance for each sample
+               store_mean_dist[x] <- mean(dist, na.rm=T)
+          
+        }
+      
+      }
+        
+      mean_dataset[rep] <- mean(store_mean_dist, na.rm=T)
+
+}
+# write(mean_dataset, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/permutations_mean_distance_per_mut.txt", sep = "\t", append = T, ncolumns = 1)
+
+uploaded_dataset <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/permutations_mean_distance_per_mut.txt", sep = "\t")
+
+pdf(file=paste("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/figures/Figure3_panelB.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
+
+# correlation between number of variants and space
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+hist(uploaded_dataset$V1, 25, xlab = "Mean distance within groups sharing one mutation",
+     main = "", probability = T, xlim = c(260,300)) #  
+lines(rep(val_data_mean,2), c(0, 120), col = "red", lwd = 2)
+legend("top", c("Mean for data (264.28 m)", "Mean for randomized dataset"), pch = 22, pt.bg = c("#969696", "red"), bty = "n")
+
+dev.off()
+
+# Estimate one-tail p-value
+length(which(mean_dataset < val_data_mean)) #0
+
+mean(uploaded_dataset$V1)
+```
+
+
+
+
+
+
