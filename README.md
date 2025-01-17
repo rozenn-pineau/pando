@@ -64,6 +64,51 @@ perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/P
 
 #  Alignments and variant calling
 
+We aligned the reads against the reference genome for _Populus tremuloides_ using bwa mem algorithm ([BwaFork.pl](https://github.com/rozenn-pineau/pando/blob/main/BwaFork.pl)).
+
+```
+#!/bin/sh 
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=8
+#SBATCH --account=gompert-np
+#SBATCH --partition=gompert-np
+#SBATCH --job-name=baw-mem
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rpineau3@gatech.edu
+
+module load bwa
+
+cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/parsed/step3/
+
+perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/BwaFork.pl *.fastq
+
+```
+We then compressed, sorted and indexed the aligned reads using samtools ([Sam2BamFork.pl](https://github.com/rozenn-pineau/pando/blob/main/Sam2BamFork.pl)).
+
+```
+#!/bin/sh
+#SBATCH --time=3:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=24
+#SBATCH --account=gompert-np
+#SBATCH --partition=gompert-np
+#SBATCH --job-name=sam2bam
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=rpineau3@gatech.edu
+
+module load samtools
+## loads version 1.5 with htslib 1.5
+
+cd /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/aligned/
+
+perl /uufs/chpc.utah.edu/common/home/u6028866/Pando/replicate_analysis/scripts/Sam2BamFork.pl *.sam
+
+```
+
+We applied initial basic quality filters on the vcf file for the initial analysis of identifying the Pandio samples ([Identifying Pando samples](#identify-pando)) and additional filtering steps, which are detailed in the section "Filtering for somatic mutations".
+
+#identify-pando
 #  Identifying Pando samples
 
 We calculated point estimates for each sample in the large scale dataset (i.e. the posterior mean genotype as a point estimate based on the genotype likelihood from bcftools and a binomial prior based on the allele frequency estimates from the vcf file, [vcf2gl.pl](https://github.com/rozenn-pineau/pando/blob/main/vcf2gl.pl) ).
