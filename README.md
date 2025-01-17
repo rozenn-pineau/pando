@@ -3,10 +3,15 @@ Scripts and notes for the Pando project.
 
 ### Sections
 [Raw reads preparation](#Raw-reads-preparation)
+
 [Alignments and variant calling](#Alignments-and-variant-calling)
+
 [Identifying Pando samples](#-Identifying-Pando-samples)
+
 [Filtering for somatic mutations](#Filtering-for-somatic-mutations)
+
 [Age estimations](#Age-estimations)
+
 
 
 
