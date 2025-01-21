@@ -1,13 +1,13 @@
 ---
-title: "Fine scale dataset - age estimation"
+title: "Large scale dataset - spatial analysis"
 output: html_document
 date: "2024-07"
 ---
 
 ### Dataset details
-- 102 individuals and 3957 snps. <br />
+- 101 individuals and 3034 snps. <br />
 
-- testing the relationship between tree height and proportion of SNPs in the dataset to take into account missing snps: proportions (of snps kept) tested --> 0.15,0.3,0.6,0.9
+- testing the relationship between tree height and proportion of SNPs in the dataset to take into account missing snps: proportions (of snps kept) tested --> 0.15,0.4,0.7,0.9,1
 
 
 ```{r libraries}
@@ -56,7 +56,7 @@ height_5 <- temp[temp<0.5] # remove tail
 # Get mean and std
 means <- c(mean(height_1), mean(height_2), mean(height_3), mean(height_4), mean(height_5)) 
 sds <- c(sd(height_1), sd(height_2), sd(height_3), sd(height_4), sd(height_5)) 
-percent_snp_kept <- c(0.15,0.3,0.6,0.9,1) 
+percent_snp_kept <- c(0.15,0.4,0.7,0.9,1) # this is kept if this : c(0.85,0.6,0.3,0.1,0) is removed
 
 ```
 
