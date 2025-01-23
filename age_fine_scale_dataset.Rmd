@@ -17,6 +17,7 @@ library(extrafont)
 library(ggtree)
 library(ggplot2)
 library(colourvalues)
+library(data.table)
 
 ```
 
@@ -90,7 +91,7 @@ b <- reg$coefficients[1]
 ```{r plot}
 yvals <- a*percent_snp_kept + b
 
-setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/6_figures")
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure6fs")
 pdf(file=paste("fs_tree_height_missing_snps_relationship.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
 
 par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
@@ -127,7 +128,7 @@ age_bf <- (((tree_height_bf_correction*SNPtot)/BPtot)/mu/3) # age before correct
 age_1 <- (((tree_height_af_correction_1*SNPtot)/BPtot)/mu/3) # age after correction - 100 374.6
 age_2 <- (((tree_height_af_correction_2*SNPtot)/BPtot)/mu/3) # 12 145.24
 
-setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/6_figures")
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure6fs")
 pdf(file=paste("fine_scale_pando_age.pdf", sep="" ), bg = "transparent", width=5.5, height=3, family = "Times New Roman")
 
 
@@ -151,13 +152,13 @@ legend('topright',c('assumption 1','assumption 2', 'assumption 3'), pch = 22,
 
 
 # Confidence interval
-mean(age_bf)
+mean(age_bf) #31421.14
 sd(age_bf)
 t.test(age_bf, conf.level = 0.95)$conf.int # age before correction : 33965.58 33980.50 - mean 32423.68
-mean(age_1)
+mean(age_1) #97674.11
 sd(age_1)
 t.test(age_1, conf.level = 0.95)$conf.int # age before correction : 80993.91 81022.39
-mean(age_2)
+mean(age_2) #11489.3
 sd(age_2)
 t.test(age_2, conf.level = 0.95)$conf.int # age before correction : 16401.96 16402.06
 # are confidence interval so small because a lot of data??
@@ -182,15 +183,15 @@ bsp$age_2 <- (tmp*SNPtot)/BPtot/mu/3
 bsp$age_3 <- (tmp2*SNPtot)/BPtot/mu/3
 
 
-setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/6_figures")
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure6fs")
 pdf(file=paste("bsp_fine_scale.pdf", sep="" ), bg = "transparent", width=5, height=3, family = "Times New Roman")
 
 par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
-plot(bsp$age, log(bsp$mean), type = "l" , bty = "n", xlim = c(25000, 0), # ylim = c(0,4000),
+plot(bsp$age, log(bsp$median), type = "l" , bty = "n", xlim = c(25000, 0), # ylim = c(0,4000),
      xlab = "Age (years)", ylab = "Effective population size (log)")
 # model before correction
 polygon(c(rev(bsp$age), bsp$age), c(rev(log(bsp$lower)), log(bsp$upper)), col = '#ccece6', border = NA) # add fill
-lines(bsp$age, log(bsp$mean), lwd = 2, col = '#353535' )
+lines(bsp$age, log(bsp$median), lwd = 2, col = '#353535' )
 # # 6% mutations are real
 # polygon(c(rev(bsp$age_2), bsp$age_2), c(rev(log(bsp$lower)), log(bsp$upper)), col = '#762a83', border = NA, xlim = c(25000, 0)) # add fill
 # lines(bsp$age_2, log(bsp$mean), lwd = 2, col = '#353535' )
@@ -205,9 +206,9 @@ lines(bsp$age, log(bsp$mean), lwd = 2, col = '#353535' )
 
 ```{r phylogeny}
 # load GL for point coloring
-gl <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/gl_pando_3957snps_102inds.txt") # 101 x 3957
+gl <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/gl_subclone_3047snps_101inds.txt") # 101 x 3047
 info <- read.table("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/3_spatial_structure/data/ids_PS_sup4.txt", sep = "\t", header = T)
-info <- info[which(info$group == "pando"),] # 102 x 7
+info <- info[which(info$group == "subclone"),] # 102 x 7
 
 
 # PCA
@@ -230,13 +231,13 @@ info$pc1col <- colour_values(all$pc1, palette = "purples")
 #write.table(all$cols, "/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/4_scripts/data/cols_pc1_large_scale.txt", col.names = F, row.names = F, sep = "\t")
 
 # PC1 versus PC2 
-setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure5")
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure6fs")
 pdf(file="pca_large_scale.pdf",
     bg = "transparent", width=5, height=3, family = "Times New Roman")
 
 par(family="Times New Roman", cex.lab=1.5, cex.axis=1.2, cex.main=1.5, cex.sub=1.5)
 #plot.new(xlab=paste("PC1, ", ax1, "%"), ylab=paste("PC2, ", ax2, "%"), bty = "n")
-plot(1, type="n",xlab=paste("PC1, ", ax1, "%"), ylab=paste("PC2, ", ax2, "%"), bty = "n", xlim=c(-7, 7), ylim=c(-7, 7))
+plot(1, type="n",xlab=paste("PC1, ", ax1, "%"), ylab=paste("PC2, ", ax2, "%"), bty = "n", xlim=c(-3, 16), ylim=c(-7, 7))
 points(all$pc1, all$pc2, pch=16, col = all$cols, cex = 1.3)
 abline(h=0, lty=2, col="grey")
 abline(v=0, lty=2, col="grey")
@@ -244,11 +245,11 @@ abline(v=0, lty=2, col="grey")
 dev.off()
 
 # phylogeny built from 35000 trees (out of 70 000, 50% burnt) using TreeAnnotator
-setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/3_results/pando")
-tree <- read.tree("ps_3957snps.tre") # to be saved in Newick format
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/4_age/5_results/pando/dec30/3034")
+tree <- read.tree("fs_3034snps_single_tree.newick") # to be saved in Newick format
 tree$edge.length <- ((tree$edge.length*SNPtot)/BPtot)/mu/3
 
-setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure5")
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Figure6fs")
 pdf(file="scale.pdf",
     bg = "transparent", width=10, height=10, family = "Times New Roman")
 
