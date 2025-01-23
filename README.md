@@ -388,7 +388,7 @@ To take into account missing mutations in our age estimation, we first determine
 
 To visualize effective population size through time, we used Beast Tracer v1.7.2 to reconstruct the Bayesian Skyline, under "Analysis", "Bayesian Skyline reconstruction" and saving the output data table. The plot was done in R ([age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
 
-To construct the Pando samples phylogeny, we first summarized the trees from the Beast output using TreeAnnotator v2.7.6. We then saved the tree output from FigTree to plot in R ([age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
+To construct the Pando samples phylogeny, we first summarized the trees from the Beast output using TreeAnnotator v2.7.6. We then saved the tree output from FigTree to plot in R ([age_large_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_large_scale_dataset.Rmd) and [age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
 
 
 
