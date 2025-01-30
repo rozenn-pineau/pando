@@ -1,0 +1,282 @@
+---
+title: "Why do some SNPs not replicate between datasets?"
+output: html_document
+date: "2024-08"
+---
+
+### Dataset details
+- 80 samples versus 12 samples. 6 mutations in common. What about the rest?
+
+```{r libraries}
+rm(list= ls())
+
+library(extrafont)
+library(ggtree)
+library(ggplot2)
+library(colourvalues)
+library(data.table)
+
+setwd("/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/1_comparison_reps_singles/data/depth/")
+dp_common <- fread("depth_common_snp.txt")
+dp_unique_reps <- fread("depth_unique_reps_snp.txt")
+dp_unique_fs <- fread("depth_unique_fine_scale_snp.txt")
+dp_common_fs <- fread("depth_12samp_FS.txt")  
+
+
+
+```
+
+
+```{r plot_depth_update}
+# put together
+all_dp <- data.frame( depth= c(rowSums(dp_common)/dim(dp_common)[2], 
+            rowSums(dp_unique_fs)/dim(dp_unique_fs)[2], 
+            rowSums(dp_unique_reps)/dim(dp_unique_reps)[2], 
+            rowSums(dp_common_fs)/dim(dp_common_fs)[2]),
+            dataset = c(rep("replicates", length(rowSums(dp_common))),
+                        rep("fine_scale", length(rowSums(dp_unique_fs))), 
+                        rep("replicates", length(rowSums(dp_unique_reps))), 
+                        rep("fine_scale", length(rowSums(dp_common_fs)))),
+            shared = c(rep("shared", length(rowSums(dp_common))), 
+                       rep("unique", c(length(rowSums(dp_unique_fs)) + length(rowSums(dp_unique_reps)))), 
+                       rep("shared", length(rowSums(dp_common_fs)))) )
+
+place <- sort.list(log10(all_dp$depth))
+sorted <- sort(log10(all_dp$depth))
+L <- length(place) # 5183
+
+#means
+smry <- aggregate(all_dp$depth ~ all_dp$dataset, data = all_dp, FUN = mean)
+
+```
+
+
+```{r plot_depth_update}
+pdf(file="/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Supp/supp_replication.pdf", 
+    bg = "transparent", width=6, height=4, family = "Times New Roman")
+
+
+par(family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+plot(sorted, pch = 16, cex = 1, col = "white", xlab = "SNP", ylab = "Mean read depth per sample [LOG]")
+
+idx <- place[all_dp$dataset=="fine_scale" & all_dp$shared =="unique"] #unique, from the replicate dataset 
+points(idx, sorted[idx], pch = 16, cex = 1, col = "gray")
+idx <- place[all_dp$dataset=="replicates" & all_dp$shared =="unique"] #unique, from the replicate dataset 
+points(idx, sorted[idx], pch = 16, cex = 1, col = "#94BCFD")
+# Where are the ones that replicate at?
+idx <- place[all_dp$dataset=="replicates" & all_dp$shared =="shared"] #shared, from the replicate dataset - 6
+points(idx, sorted[idx], pch = 21, cex = 1, bg = "#BA5218")
+idx <- place[all_dp$dataset=="fine_scale" & all_dp$shared =="shared"] #shared, from the fine scale dataset - 6
+points(idx, sorted[idx], pch = 21, cex = 1, bg = "white")
+
+
+# legend
+legend("bottomright", legend = c("SNPs in replicates dataset", "SNPs in fine scale dataset",
+                            "SNPs in both datasets from the fine scale dataset","SNPs in both datasets from the replicate dataset"), 
+       bty = "n", pch = c(16, 16, 21, 21), 
+       pt.bg  = c("gray", "#94BCFD", "white", "#BA5218"),
+       col = c("gray", "#94BCFD", "black", "black"))
+
+```
+
+```{r some_stats}
+
+mean(all_dp$depth) #12.3 mean read depth for somatic mutations only
+# Where are the ones that replicate at?
+mean(all_dp$depth[all_dp$dataset=="replicates" & all_dp$shared =="unique"]) 
+#41.5
+mean(all_dp$depth[all_dp$dataset=="replicates" & all_dp$shared =="shared"]) 
+#72
+mean(all_dp$depth[all_dp$dataset=="fine_scale" & all_dp$shared =="shared"]) 
+#32.5
+mean(all_dp$depth[all_dp$dataset=="fine_scale" & all_dp$shared =="unique"]) 
+#11.65517
+
+#Coverage partially explained the lack of replication. In general, mutations that were found in the replicate dataset had a much higher depth than mutations the mutations found in the fine scale dataset (41.5x versus 11.6x), however, some of the somatic mutations that were found in both datasets had a depth as low as 6x for the fine scale dataset. 
+```
+```{r}
+
+
+plot(all_dp$depth[all_dp$dataset=="replicates" & all_dp$shared =="shared"], 
+     all_dp$depth[all_dp$dataset=="fine_scale" & all_dp$shared =="shared"], pch = 16, 
+     xlab = "Depth in replicates", ylab = "Depth in fine scale")
+
+```
+# Part 2 : extract and plot simple vcf stats
+
+#import data
+
+```{r import_data}
+setwd("/Users/rozenn/GaTech\ Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/17-analyses/1_comparison_reps_singles/data/compare")
+reps <- read.table("12inds_PS.summary.txt", sep ="\t", header = F)
+sub <- read.table("101snps_80inds.summary.txt", sep ="\t", header = F)
+colnames(reps) <- c("CHROM" ,"POS","REF","ALT","QUAL","DP","AC","AN")
+colnames(sub) <- c("CHROM" ,"POS","REF","ALT","QUAL","DP","AC","AN")
+
+```
+
+
+```{r reps_btw_datasets}
+common <- matrix(NA, 6, 16)
+counter <- 1
+for (c in 1:dim(sub)[1]) {
+  
+  idx_chrom <- which(sub$CHROM[c] == reps$CHROM) #idx in reps
+  
+  if (length(idx_chrom) > 0) {
+      
+    for (C in 1:length(idx_chrom)) {
+        
+        idx_pos <- idx_chrom[C] #loop within idx in reps
+    
+        if(sub$POS[c] == reps$POS[idx_pos]) {common[counter,] <- c(sub$CHROM[c], sub$POS[c], sub$REF[c], sub$ALT[c], 
+                                                                   sub$QUAL[c], sub$DP[c], sub$AC[c], sub$AN[c],
+                                                                   reps$CHROM[idx_pos], reps$POS[idx_pos], reps$REF[idx_pos], reps$ALT[idx_pos], 
+                                                                   reps$QUAL[idx_pos], reps$DP[idx_pos], reps$AC[idx_pos], reps$AN[idx_pos])
+                counter <- counter + 1
+                }
+
+          }
+
+  }
+  
+}
+#nice ! I have my dataset !
+```
+
+
+#Plot quality, depth, allele frequency
+```{r basic_plot}
+
+pdf(file="/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Supp/compare_stats_reps.pdf", 
+    bg = "transparent", width=10, height=4, family = "Times New Roman")
+
+
+par(mfrow=c(1,3) ,family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+
+#QUALITY
+jitter <- c( seq(0.9,1.1, by = 0.2/length(sub$QUAL))[1:101] , seq(1.9,2.1, by = 0.2/length(reps$QUAL))[1:5082] )
+plot(jitter , c(sub$QUAL, reps$QUAL), pch = 16, xlim = c(0,3), xaxt = "n", ylab = "Quality", xlab = "")
+axis(1, at = c(1,2), labels = c("Replicates", "Fine-scale"))
+#add means and sd
+points(c(1,2), c(mean(sub$QUAL), mean(reps$QUAL)), pch = 16, col = "#bcbddc", cex = 1.3)
+arrows(c(1,2), c(mean(sub$QUAL)+sd(sub$QUAL)/sqrt(length(sub$QUAL)), mean(reps$QUAL)+sd(reps$QUAL)/sqrt(length(reps$QUAL))),
+       c(1,2), c(mean(sub$QUAL)-sd(sub$QUAL)/sqrt(length(sub$QUAL)), mean(reps$QUAL)-sd(reps$QUAL)/sqrt(length(reps$QUAL))),
+                 code = 3, angle = 90, length = 0.05, col = "#bcbddc" )
+
+
+#DEPTH
+jitter <- c( seq(0.9,1.1, by = 0.2/length(sub$DP))[1:101] , seq(1.9,2.1, by = 0.2/length(reps$DP))[1:5082] )
+plot(jitter , c(sub$DP, reps$DP), pch = 16, xlim = c(0,3), xaxt = "n", ylab = "Depth", xlab = "")
+axis(1, at = c(1,2), labels = c("Replicates", "Fine-scale"))
+#add means and sd
+points(c(1,2), c(mean(sub$DP), mean(reps$DP)), pch = 16, col = "#bcbddc", cex = 1.3)
+arrows(c(1,2), c(mean(sub$DP)+sd(sub$DP)/sqrt(length(sub$QUAL)), mean(reps$DP)+sd(reps$DP)/sqrt(length(reps$QUAL))),
+       c(1,2), c(mean(sub$DP)-sd(sub$DP)/sqrt(length(sub$QUAL)), mean(reps$DP)-sd(reps$DP)/sqrt(length(reps$QUAL))), 
+       code = 3, angle = 90, length = 0.05, col = "#bcbddc" )
+
+
+#ALLELE FREQ
+reps$AF <- reps$AC/reps$AN
+sub$AF <- sub$AC/sub$AN
+jitter <- c( seq(0.9,1.1, by = 0.2/length(sub$AF))[1:101] , seq(1.9,2.1, by = 0.2/length(reps$AF))[1:5082] )
+plot(jitter , c(sub$AF, reps$AF), pch = 16, xlim = c(0,3), xaxt = "n", ylab = "Allele frequency", xlab = "")
+axis(1, at = c(1,2), labels = c("Replicates", "Fine-scale"))
+#add means and sd
+points(c(1,2), c(mean(sub$AF), mean(reps$AF)), pch = 16, col = "#bcbddc", cex = 1.3)
+arrows(c(1,2), c(mean(sub$AF)+sd(sub$AF)/sqrt(length(sub$QUAL)), mean(reps$AF)+sd(reps$AF)/sqrt(length(reps$QUAL))),
+       c(1,2), c(mean(sub$AF)-sd(sub$AF)/sqrt(length(sub$QUAL)), mean(reps$AF)-sd(reps$AF)/sqrt(length(reps$QUAL))), 
+       code = 3, angle = 90, length = 0.05, col = "#bcbddc" )
+
+
+```
+
+
+```{r compare pairs}
+#same analyses but this time between the SNP that replicated
+pdf(file="/Users/rozenn/GaTech Dropbox/CoS/BioSci/BioSci-Ratcliff/Rozenn/4.PandoProject/5-Writing/5.Figures/current/Supp/compare_stats_reps_common_snps.pdf", 
+    bg = "transparent", width=10, height=4, family = "Times New Roman")
+
+
+par(mfrow=c(1,3) ,family="Times New Roman", cex.lab=1.2, cex.axis=1.2, cex.main=1, cex.sub=1)
+
+#QUALITY
+#loop through snps between datasets (pairs)
+plot(0, xlim = c(0,3), ylim = c(10,2200), ylab = "Quality", xaxt = "n", xlab = "", pch = "" )
+axis(1, at = c(1,2), labels = c("Replicates", "Fine-scale"))
+
+jitter <- 0
+for (p in 1:dim(common)[1]) {
+  
+  lines(c(1 + jitter, 2 + jitter), common[p,c(5,13)], type = "b", pch = 16, cex = 1.2 )
+  jitter <- jitter + 0.05
+  
+}
+#add means as box plots
+boxplot(as.numeric(common[,5]), add=TRUE, at = 0.6, boxwex = 0.15, border = "#505050", col = "#D3D3D3")
+boxplot(as.numeric(common[,13]), add=TRUE, at = 2.7, boxwex = 0.15, border = "#505050", col = "#D3D3D3")
+
+#DEPTH
+jitter <- 0
+plot(0, xlim = c(0,3), ylim = c(10,24000), ylab = "Depth", xaxt = "n", xlab = "", pch = "" )
+axis(1, at = c(1,2), labels = c("Replicates", "Fine-scale"))
+
+jitter <- 0
+for (p in 1:dim(common)[1]) {
+  
+  lines(c(1 + jitter, 2 + jitter), common[p,c(6,14)], type = "b", pch = 16, cex = 1.2 )
+  jitter <- jitter + 0.05
+  
+}
+#add means as box plots
+boxplot(as.numeric(common[,6]), add=TRUE, at = 0.6, boxwex = 0.15, border = "#505050", col = "#D3D3D3")
+boxplot(as.numeric(common[,14]), add=TRUE, at = 2.7, boxwex = 0.15, border = "#505050", col = "#D3D3D3")
+
+
+#ALLELE FREQUENCY
+jitter <- 0
+AF_sub <- as.numeric(common[,7])/as.numeric(common[,8])
+AF_reps <- as.numeric(common[,15])/as.numeric(common[,16])
+
+plot(0, xlim = c(0,3), ylim = c(0, 0.3), ylab = "Allele Frequency", xaxt = "n", xlab = "", pch = "" )
+axis(1, at = c(1,2), labels = c("Replicates", "Fine-scale"))
+
+jitter <- 0
+for (p in 1:dim(common)[1]) {
+  
+  lines(c(1 + jitter, 2 + jitter), c(AF_sub[p], AF_reps[p]), type = "b", pch = 16, cex = 1.2 )
+  jitter <- jitter + 0.05
+  
+}
+#add means as box plots
+boxplot(AF_sub, add=TRUE, at = 0.6, boxwex = 0.15, border = "#505050", col = "#D3D3D3")
+boxplot(AF_reps, add=TRUE, at = 2.7, boxwex = 0.15, border = "#505050", col = "#D3D3D3")
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
