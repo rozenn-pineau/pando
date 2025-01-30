@@ -14,6 +14,7 @@ Scripts and notes for the Pando project.
 
 [Age estimations](#Age-estimations)
 
+[Additional analyses](#Additional-analyses)
 
 
 
@@ -389,6 +390,13 @@ To take into account missing mutations in our age estimation, we first determine
 To visualize effective population size through time, we used Beast Tracer v1.7.2 to reconstruct the Bayesian Skyline, under "Analysis", "Bayesian Skyline reconstruction" and saving the output data table. The plot was done in R ([age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
 
 To construct the Pando samples phylogeny, we first summarized the trees from the Beast output using TreeAnnotator v2.7.6. We then saved the tree output from FigTree to plot in R ([age_large_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_large_scale_dataset.Rmd) and [age_fine_scale_dataset.Rmd](https://github.com/rozenn-pineau/pando/blob/main/age_fine_scale_dataset.Rmd)).
+
+
+# Additional analyses
+### Why do we have such low replication of somatic mutations between datasets ?
+
+We sequence the same DNA extraction 8 times for 12 samples and extract the somatic mutations. We compare this set of somatic mutations to the set we had obtained from these same samples, but sequenced only once in a pool of 117 samples (fine-scale dataset). We only find 4 mutations in common between datasets, out of 101. This low replication rate is disappointing and definitely hindering our power to resolve the age or spatial patterns of the Pando clone. To try and understand what could be causing this low replication rate, we looked at allelic deth, quality and frequency in both datasets : [why_do_some_snp_not_replicate](https://github.com/rozenn-pineau/pando/blob/main/why_do_some_snp_not_replicate).
+
 
 
 
